@@ -288,7 +288,7 @@ def signal_analysis(symbol: str, interval: str = "5m", period: str = "1d"):
         print(f"期間: {data['timestamp'].min()} 〜 {data['timestamp'].max()}")
         
         # シグナル生成実行
-        signal_generator = SignalGenerator()
+        signal_generator = SignalGenerator(data)
         signals = signal_generator.generate_signals(data)
         
         if signals is None or signals.empty:

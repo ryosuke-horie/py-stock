@@ -342,7 +342,7 @@ class StockDashboard:
                 try:
                     data = self.data_collector.get_stock_data(symbol, period="1d", interval="5m")
                     if data is not None and not data.empty:
-                        signal_generator = SignalGenerator()
+                        signal_generator = SignalGenerator(data)
                         signals = signal_generator.generate_signals(data)
                         
                         if signals is not None and not signals.empty:

@@ -219,7 +219,7 @@ class BacktestComponent:
             status_text.text("シグナルを生成中...")
             progress_bar.progress(40)
             
-            signal_generator = SignalGenerator()
+            signal_generator = SignalGenerator(data)
             signals = signal_generator.generate_signals(data)
             
             if signals is None or signals.empty:

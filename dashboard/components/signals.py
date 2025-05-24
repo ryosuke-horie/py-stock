@@ -121,7 +121,7 @@ class SignalComponent:
                 return
             
             # シグナル生成
-            signal_generator = SignalGenerator()
+            signal_generator = SignalGenerator(data)
             signals = signal_generator.generate_signals(data)
             
             if signals is None or signals.empty:
