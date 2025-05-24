@@ -16,6 +16,7 @@ from src.data_collector.stock_data_collector import StockDataCollector
 from src.data_collector.symbol_manager import SymbolManager, MarketType
 from src.config.settings import settings_manager
 from src.utils.data_validator import DataValidator
+from src.technical_analysis.indicators import TechnicalIndicators
 from loguru import logger
 
 
@@ -139,6 +140,119 @@ def show_sample_symbols():
         print(f"  {symbol}: {info['name']}")
 
 
+def technical_analysis(symbol: str, interval: str = "5m", period: str = "1d"):
+    """テクニカル分析実行"""
+    print(f"テクニカル分析: {symbol}")
+    
+    # 初期化
+    settings_manager.setup_logging()
+    collector = StockDataCollector()
+    symbol_manager = SymbolManager()
+    
+    # 銘柄正規化
+    normalized_symbol = symbol_manager.normalize_symbol(symbol)
+    symbol_info = symbol_manager.get_symbol_info(symbol)
+    
+    print(f"銘柄情報: {symbol_info['name']} ({normalized_symbol})")
+    
+    try:
+        # データ取得
+        data = collector.get_stock_data(
+            symbol=normalized_symbol,
+            interval=interval,
+            period=period,
+            use_cache=True
+        )
+        
+        if data is None or len(data) < 20:
+            print("テクニカル分析に十分なデータがありません")
+            return False
+        
+        print(f"分析データ: {len(data)}件")
+        print(f"期間: {data['timestamp'].min()} 〜 {data['timestamp'].max()}")
+        
+        # テクニカル分析実行
+        indicators = TechnicalIndicators(data)
+        analysis = indicators.comprehensive_analysis()
+        
+        # 結果表示
+        current = analysis['current_values']
+        ohlcv = analysis['ohlcv']
+        
+        print(f"\n📊 テクニカル分析結果 ({analysis['timestamp'].strftime('%Y-%m-%d %H:%M')})")
+        print("=" * 50)
+        
+        print(f"💰 価格情報:")
+        print(f"  終値: {ohlcv['close']:.2f}")
+        print(f"  出来高: {ohlcv['volume']:,}")
+        
+        print(f"\n📈 主要指標:")
+        print(f"  RSI(14): {current['rsi_current']:.2f}")
+        print(f"  ストキャス%K: {current['stoch_k_current']:.2f}")
+        print(f"  MACD: {current['macd_current']:.4f}")
+        print(f"  ボリンジャー%B: {current['bb_percent_b_current']:.3f}")
+        print(f"  ATR: {current['atr_current']:.2f}")
+        
+        # シグナル分析
+        signals = indicators.get_trading_signals()
+        
+        # 買いシグナル集計
+        buy_signals = [
+            ('RSI過売り', signals['rsi_oversold']),
+            ('ストキャス過売り', signals['stoch_oversold']),
+            ('MACDゴールデンクロス', signals['macd_bullish']),
+            ('VWAP上', signals['price_above_vwap']),
+            ('下部バンド反発', signals['bb_lower_return'])
+        ]
+        
+        # 売りシグナル集計  
+        sell_signals = [
+            ('RSI過買い', signals['rsi_overbought']),
+            ('ストキャス過買い', signals['stoch_overbought']),
+            ('MACDデッドクロス', signals['macd_bearish']),
+            ('VWAP下', signals['price_below_vwap']),
+            ('上部バンド反発', signals['bb_upper_return'])
+        ]
+        
+        print(f"\n🎯 シグナル分析:")
+        
+        active_buy = [name for name, active in buy_signals if active]
+        active_sell = [name for name, active in sell_signals if active]
+        
+        if active_buy:
+            print(f"  🟢 買いシグナル: {', '.join(active_buy)}")
+        if active_sell:
+            print(f"  🔴 売りシグナル: {', '.join(active_sell)}")
+        
+        # 総合判定
+        buy_count = len(active_buy)
+        sell_count = len(active_sell)
+        
+        print(f"\n📋 総合判定:")
+        if buy_count >= 3:
+            print("  🟢 強い買いシグナル")
+        elif buy_count >= 2:
+            print("  🟢 買いシグナル")
+        elif sell_count >= 3:
+            print("  🔴 強い売りシグナル")
+        elif sell_count >= 2:
+            print("  🔴 売りシグナル")
+        else:
+            print("  ⚪ 中立（様子見）")
+        
+        print(f"  シグナル比率: 買い{buy_count}/売り{sell_count}")
+        
+        # 特殊状況
+        if signals['bb_squeeze']:
+            print("  ⚠️  ボリンジャーバンドスクイーズ（ブレイクアウト待ち）")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"テクニカル分析エラー: {e}")
+        return False
+
+
 def clean_cache(days: int = 30):
     """キャッシュクリーニング"""
     print(f"{days}日以上古いキャッシュをクリーニング")
@@ -173,6 +287,9 @@ def main():
   # 複数銘柄の5分足データを取得
   python main.py --symbols 7203 AAPL MSFT --interval 5m
   
+  # テクニカル分析実行（トヨタ5分足）
+  python main.py --technical 7203 --interval 5m
+  
   # キャッシュ統計表示
   python main.py --cache-stats
   
@@ -187,6 +304,7 @@ def main():
     # 引数定義
     parser.add_argument("--symbol", type=str, help="単一銘柄コード")
     parser.add_argument("--symbols", nargs="+", help="複数銘柄コード")
+    parser.add_argument("--technical", type=str, help="テクニカル分析対象銘柄")
     parser.add_argument("--interval", default="1m", 
                        choices=["1m", "2m", "5m", "15m", "30m", "1h", "1d"],
                        help="データ間隔 (デフォルト: 1m)")
@@ -212,6 +330,11 @@ def main():
         elif args.symbols:
             success_count = collect_multiple_stocks(args.symbols, args.interval, args.period)
             sys.exit(0 if success_count > 0 else 1)
+        
+        # テクニカル分析
+        elif args.technical:
+            success = technical_analysis(args.technical, args.interval, args.period)
+            sys.exit(0 if success else 1)
         
         # キャッシュ統計
         elif args.cache_stats:
