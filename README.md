@@ -45,8 +45,6 @@
 ## 🔧 インストールと使用方法
 
 ### セットアップ
-
-#### uv使用（推奨）
 ```bash
 # リポジトリクローン
 git clone https://github.com/ryosuke-horie/py-stock.git
@@ -62,44 +60,15 @@ uv sync --extra dashboard
 uv sync --extra all
 ```
 
-#### 従来のvenv/pip使用
-```bash
-# リポジトリクローン
-git clone https://github.com/ryosuke-horie/py-stock.git
-cd py-stock
-
-# Python仮想環境作成
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-# venv\Scripts\activate  # Windows
-
-# 依存関係インストール
-pip install -r requirements.txt
-
-# ダッシュボード用ライブラリ（追加インストール）
-pip install streamlit plotly
-```
-
 ## 🖥️ ダッシュボード使用方法
 
 ### ダッシュボード起動
-
-#### uv使用
 ```bash
 # Streamlitダッシュボードを起動
 uv run streamlit run dashboard/app.py
 
 # または仮想環境をアクティベートしてから
 uv shell
-streamlit run dashboard/app.py
-
-# ブラウザで自動的に開く（通常 http://localhost:8501）
-```
-
-#### 従来のvenv/pip使用
-```bash
-# 仮想環境をアクティベートしてから
-source venv/bin/activate  # macOS/Linux
 streamlit run dashboard/app.py
 
 # ブラウザで自動的に開く（通常 http://localhost:8501）
@@ -166,63 +135,35 @@ streamlit run dashboard/app.py
 
 #### 単一銘柄データ取得
 ```bash
-# uv使用
 uv run python main.py --symbol 7203 --interval 1m
 uv run python main.py --symbol AAPL --interval 5m --period 1d
-
-# 従来方法
-python main.py --symbol 7203 --interval 1m
-python main.py --symbol AAPL --interval 5m --period 1d
 ```
 
 #### 複数銘柄並列取得
 ```bash
-# uv使用
 uv run python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
 uv run python main.py --symbols 7203 6758 7974 9984 6861 --interval 1m
-
-# 従来方法
-python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
-python main.py --symbols 7203 6758 7974 9984 6861 --interval 1m
 ```
 
 #### キャッシュ管理
 ```bash
-# uv使用
 uv run python main.py --cache-stats
 uv run python main.py --clean-cache 7
 uv run python main.py --samples
-
-# 従来方法
-python main.py --cache-stats
-python main.py --clean-cache 7
-python main.py --samples
 ```
 
 #### テクニカル分析
 ```bash
-# uv使用
 uv run python main.py --technical 7203 --interval 5m
 uv run python main.py --technical AAPL --interval 1d --period 3mo
 uv run python main.py --technical MSFT --interval 1m --period 1d
-
-# 従来方法
-python main.py --technical 7203 --interval 5m
-python main.py --technical AAPL --interval 1d --period 3mo
-python main.py --technical MSFT --interval 1m --period 1d
 ```
 
 #### サポート・レジスタンス分析
 ```bash
-# uv使用
 uv run python main.py --support-resistance 7203 --interval 1h --period 1mo
 uv run python main.py --support-resistance AAPL --interval 1d --period 6mo
 uv run python main.py --support-resistance MSFT --interval 5m --period 1d
-
-# 従来方法
-python main.py --support-resistance 7203 --interval 1h --period 1mo
-python main.py --support-resistance AAPL --interval 1d --period 6mo
-python main.py --support-resistance MSFT --interval 5m --period 1d
 ```
 
 ## 🚨 トラブルシューティング
@@ -231,17 +172,11 @@ python main.py --support-resistance MSFT --interval 5m --period 1d
 
 #### ダッシュボード起動時のエラー
 ```bash
-# uv使用時 - モジュールが見つからない場合
+# モジュールが見つからない場合
 uv sync --extra dashboard
 
-# uv使用時 - ポートが使用中の場合
+# ポートが使用中の場合
 uv run streamlit run dashboard/app.py --server.port 8502
-
-# 従来方法 - モジュールが見つからない場合
-pip install streamlit plotly pandas yfinance
-
-# 従来方法 - ポートが使用中の場合
-streamlit run dashboard/app.py --server.port 8502
 ```
 
 #### データ取得エラー
@@ -249,17 +184,11 @@ streamlit run dashboard/app.py --server.port 8502
 # インターネット接続を確認
 ping finance.yahoo.com
 
-# uv使用時 - yfinanceライブラリの更新
+# yfinanceライブラリの更新
 uv sync --upgrade
 
-# uv使用時 - キャッシュクリア
+# キャッシュクリア
 uv run python main.py --clean-cache 0
-
-# 従来方法 - yfinanceライブラリの更新
-pip install --upgrade yfinance
-
-# 従来方法 - キャッシュクリア
-python main.py --clean-cache 0
 ```
 
 #### パフォーマンス改善
@@ -442,7 +371,8 @@ yfincanceを利用する
 
 ## 🎯 クイックスタート
 
-### uv使用（推奨）
+最も簡単な開始方法：
+
 ```bash
 # 1. リポジトリクローン
 git clone https://github.com/ryosuke-horie/py-stock.git && cd py-stock
@@ -452,18 +382,6 @@ uv sync --extra dashboard
 
 # 3. ダッシュボード起動
 uv run streamlit run dashboard/app.py
-```
-
-### 従来のvenv/pip使用
-```bash
-# 1. リポジトリクローン
-git clone https://github.com/ryosuke-horie/py-stock.git && cd py-stock
-
-# 2. 環境セットアップ
-python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && pip install streamlit plotly
-
-# 3. ダッシュボード起動
-streamlit run dashboard/app.py
 ```
 
 ブラウザで http://localhost:8501 にアクセスして、株式取引分析ダッシュボードを開始！

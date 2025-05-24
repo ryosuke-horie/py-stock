@@ -37,8 +37,6 @@ MCP株価データサーバ（リアルタイム価格配信）
 
 ## 開発コマンド
 
-### uv使用（推奨）
-
 ```bash
 # Python環境セットアップ
 uv sync
@@ -64,28 +62,6 @@ uv run streamlit run dashboard/app.py
 
 # シェルの起動（仮想環境をアクティベート）
 uv shell
-```
-
-### 従来のvenv/pip使用
-
-```bash
-# Python環境セットアップ
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-pip install -r requirements.txt
-
-# テスト（実装時）
-python -m pytest
-python -m pytest tests/test_specific.py
-
-# リンティング（設定時）
-flake8 .
-black .
-mypy .
-
-# 分析実行（実装時）
-python main.py
-streamlit run dashboard/app.py
 ```
 
 ## 主要実装領域
