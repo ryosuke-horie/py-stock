@@ -15,6 +15,16 @@
 - **並列処理**: 複数銘柄の効率的な並列データ取得
 - **エラーハンドリング**: リトライ機能とレート制限対応
 
+**テクニカル分析エンジン v1.0** 🆕
+- **TechnicalIndicators**: デイトレード用主要指標ライブラリ
+- **移動平均**: EMA(9,21)、SMA(25,75) 完全対応
+- **オシレーター**: RSI(14)、ストキャスティクス(%K,%D)
+- **トレンド**: MACD(12,26,9)、シグナル検出、ヒストグラム
+- **バンド**: ボリンジャーバンド(20,±2σ)、スクイーズ検出
+- **価格**: VWAP(当日・前日比較)、乖離分析
+- **ボラティリティ**: ATR(14)、リスクレベル判定
+- **総合シグナル**: 複数指標組み合わせ売買判定
+
 ## 🔧 インストールと使用方法
 
 ### セットアップ
@@ -64,7 +74,21 @@ python main.py --clean-cache 7
 python main.py --samples
 ```
 
+#### テクニカル分析
+```bash
+# トヨタ自動車のテクニカル分析（5分足）
+python main.py --technical 7203 --interval 5m
+
+# Apple株の日足テクニカル分析
+python main.py --technical AAPL --interval 1d --period 3mo
+
+# 短期分析（1分足、当日データ）
+python main.py --technical MSFT --interval 1m --period 1d
+```
+
 ### Python APIでの使用例
+
+#### データ収集
 
 ```python
 from src.data_collector.stock_data_collector import StockDataCollector
@@ -86,6 +110,33 @@ results = collector.get_multiple_stocks(symbols, interval="5m")
 watchlist = symbol_manager.create_watchlist(
     "テック株", ["7203", "6758", "AAPL", "MSFT", "GOOGL"]
 )
+```
+
+#### テクニカル分析
+
+```python
+from src.technical_analysis.indicators import TechnicalIndicators
+
+# データ取得後にテクニカル分析
+data = collector.get_stock_data("7203.T", interval="5m", period="1d")
+indicators = TechnicalIndicators(data)
+
+# 個別指標計算
+rsi = indicators.rsi(14)              # RSI
+macd = indicators.macd(12, 26, 9)     # MACD
+bb = indicators.bollinger_bands(20, 2) # ボリンジャーバンド
+vwap = indicators.vwap()              # VWAP
+
+# 総合分析
+analysis = indicators.comprehensive_analysis()
+print(f"RSI: {analysis['current_values']['rsi_current']:.2f}")
+
+# 売買シグナル判定
+signals = indicators.get_trading_signals()
+if signals['rsi_oversold']:
+    print("RSI過売りシグナル")
+if signals['macd_bullish']:
+    print("MACDゴールデンクロス")
 ```
 
 ## 📊 データ仕様
