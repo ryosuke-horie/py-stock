@@ -45,6 +45,24 @@
 ## 🔧 インストールと使用方法
 
 ### セットアップ
+
+#### uv使用（推奨）
+```bash
+# リポジトリクローン
+git clone https://github.com/ryosuke-horie/py-stock.git
+cd py-stock
+
+# uvで仮想環境作成と依存関係インストール
+uv sync
+
+# ダッシュボード用ライブラリも含めてインストール
+uv sync --extra dashboard
+
+# 開発用ツールも含めてインストール（開発者向け）
+uv sync --extra all
+```
+
+#### 従来のvenv/pip使用
 ```bash
 # リポジトリクローン
 git clone https://github.com/ryosuke-horie/py-stock.git
@@ -65,8 +83,23 @@ pip install streamlit plotly
 ## 🖥️ ダッシュボード使用方法
 
 ### ダッシュボード起動
+
+#### uv使用
 ```bash
 # Streamlitダッシュボードを起動
+uv run streamlit run dashboard/app.py
+
+# または仮想環境をアクティベートしてから
+uv shell
+streamlit run dashboard/app.py
+
+# ブラウザで自動的に開く（通常 http://localhost:8501）
+```
+
+#### 従来のvenv/pip使用
+```bash
+# 仮想環境をアクティベートしてから
+source venv/bin/activate  # macOS/Linux
 streamlit run dashboard/app.py
 
 # ブラウザで自動的に開く（通常 http://localhost:8501）
@@ -133,55 +166,62 @@ streamlit run dashboard/app.py
 
 #### 単一銘柄データ取得
 ```bash
-# トヨタ自動車の1分足データ取得
-python main.py --symbol 7203 --interval 1m
+# uv使用
+uv run python main.py --symbol 7203 --interval 1m
+uv run python main.py --symbol AAPL --interval 5m --period 1d
 
-# Apple株の5分足データ取得
+# 従来方法
+python main.py --symbol 7203 --interval 1m
 python main.py --symbol AAPL --interval 5m --period 1d
 ```
 
 #### 複数銘柄並列取得
 ```bash
-# 日本株と米国株のミックス
-python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
+# uv使用
+uv run python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
+uv run python main.py --symbols 7203 6758 7974 9984 6861 --interval 1m
 
-# 日本テック株のバッチ取得
+# 従来方法
+python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
 python main.py --symbols 7203 6758 7974 9984 6861 --interval 1m
 ```
 
 #### キャッシュ管理
 ```bash
-# キャッシュ統計表示
+# uv使用
+uv run python main.py --cache-stats
+uv run python main.py --clean-cache 7
+uv run python main.py --samples
+
+# 従来方法
 python main.py --cache-stats
-
-# 7日以上古いキャッシュクリーニング
 python main.py --clean-cache 7
-
-# サンプル銘柄表示
 python main.py --samples
 ```
 
 #### テクニカル分析
 ```bash
-# トヨタ自動車のテクニカル分析（5分足）
+# uv使用
+uv run python main.py --technical 7203 --interval 5m
+uv run python main.py --technical AAPL --interval 1d --period 3mo
+uv run python main.py --technical MSFT --interval 1m --period 1d
+
+# 従来方法
 python main.py --technical 7203 --interval 5m
-
-# Apple株の日足テクニカル分析
 python main.py --technical AAPL --interval 1d --period 3mo
-
-# 短期分析（1分足、当日データ）
 python main.py --technical MSFT --interval 1m --period 1d
 ```
 
 #### サポート・レジスタンス分析
 ```bash
-# トヨタ自動車のサポレジ分析（1時間足）
+# uv使用
+uv run python main.py --support-resistance 7203 --interval 1h --period 1mo
+uv run python main.py --support-resistance AAPL --interval 1d --period 6mo
+uv run python main.py --support-resistance MSFT --interval 5m --period 1d
+
+# 従来方法
 python main.py --support-resistance 7203 --interval 1h --period 1mo
-
-# Apple株の長期サポレジ分析（日足）
 python main.py --support-resistance AAPL --interval 1d --period 6mo
-
-# 短期サポレジ監視（5分足）
 python main.py --support-resistance MSFT --interval 5m --period 1d
 ```
 
@@ -191,10 +231,16 @@ python main.py --support-resistance MSFT --interval 5m --period 1d
 
 #### ダッシュボード起動時のエラー
 ```bash
-# モジュールが見つからない場合
+# uv使用時 - モジュールが見つからない場合
+uv sync --extra dashboard
+
+# uv使用時 - ポートが使用中の場合
+uv run streamlit run dashboard/app.py --server.port 8502
+
+# 従来方法 - モジュールが見つからない場合
 pip install streamlit plotly pandas yfinance
 
-# ポートが使用中の場合
+# 従来方法 - ポートが使用中の場合
 streamlit run dashboard/app.py --server.port 8502
 ```
 
@@ -203,10 +249,16 @@ streamlit run dashboard/app.py --server.port 8502
 # インターネット接続を確認
 ping finance.yahoo.com
 
-# yfinanceライブラリの更新
+# uv使用時 - yfinanceライブラリの更新
+uv sync --upgrade
+
+# uv使用時 - キャッシュクリア
+uv run python main.py --clean-cache 0
+
+# 従来方法 - yfinanceライブラリの更新
 pip install --upgrade yfinance
 
-# キャッシュクリア
+# 従来方法 - キャッシュクリア
 python main.py --clean-cache 0
 ```
 
@@ -390,8 +442,19 @@ yfincanceを利用する
 
 ## 🎯 クイックスタート
 
-最も簡単な開始方法：
+### uv使用（推奨）
+```bash
+# 1. リポジトリクローン
+git clone https://github.com/ryosuke-horie/py-stock.git && cd py-stock
 
+# 2. 環境セットアップ（ダッシュボード含む）
+uv sync --extra dashboard
+
+# 3. ダッシュボード起動
+uv run streamlit run dashboard/app.py
+```
+
+### 従来のvenv/pip使用
 ```bash
 # 1. リポジトリクローン
 git clone https://github.com/ryosuke-horie/py-stock.git && cd py-stock

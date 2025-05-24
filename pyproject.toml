@@ -1,0 +1,131 @@
+[project]
+name = "py-stock"
+version = "1.0.0"
+description = "株式投資の投資タイミングの見極めをPython x Claude Code x MCPでやってみる試み"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "ryosuke-horie", email = "noreply@example.com"}
+]
+keywords = ["stock", "trading", "technical-analysis", "mcp", "streamlit"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    # 株価データ取得
+    "yfinance>=0.2.18",
+    "pandas>=1.5.0",
+    "numpy>=1.24.0",
+    "scipy>=1.11.0",  # サポレジ検出用
+    
+    # データベース・キャッシュ
+    "sqlalchemy>=2.0.0",
+    
+    # 日時処理
+    "python-dateutil>=2.8.2",
+    "pytz>=2023.3",
+    
+    # 設定管理
+    "python-dotenv>=1.0.0",
+    
+    # ログ管理
+    "loguru>=0.7.0",
+    
+    # エラーハンドリング・リトライ
+    "tenacity>=8.2.0",
+    "requests>=2.31.0",
+    
+    # スケジューリング
+    "schedule>=1.2.0",
+    "APScheduler>=3.10.0",
+    
+    # データバリデーション
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dashboard = [
+    "streamlit>=1.28.0",
+    "plotly>=5.17.0",
+]
+
+dev = [
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+
+all = [
+    "py-stock[dashboard,dev]"
+]
+
+[project.scripts]
+py-stock = "main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

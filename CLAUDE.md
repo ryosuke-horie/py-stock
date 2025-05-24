@@ -37,7 +37,36 @@ MCP株価データサーバ（リアルタイム価格配信）
 
 ## 開発コマンド
 
-新規プロジェクトのため、一般的なコマンドは以下を含む予定：
+### uv使用（推奨）
+
+```bash
+# Python環境セットアップ
+uv sync
+
+# ダッシュボード用ライブラリ含む
+uv sync --extra dashboard
+
+# 開発用ツール含む（すべて）
+uv sync --extra all
+
+# テスト実行
+uv run pytest
+uv run pytest tests/test_specific.py
+
+# リンティング
+uv run flake8 .
+uv run black .
+uv run mypy .
+
+# 分析実行
+uv run python main.py
+uv run streamlit run dashboard/app.py
+
+# シェルの起動（仮想環境をアクティベート）
+uv shell
+```
+
+### 従来のvenv/pip使用
 
 ```bash
 # Python環境セットアップ
@@ -56,7 +85,7 @@ mypy .
 
 # 分析実行（実装時）
 python main.py
-streamlit run dashboard.py
+streamlit run dashboard/app.py
 ```
 
 ## 主要実装領域
