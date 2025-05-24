@@ -1,0 +1,11 @@
+streamlit>=1.28.0
+plotly>=5.17.0
+pandas>=2.1.0
+numpy>=1.24.0
+yfinance>=0.2.22
+ta>=0.10.2
+streamlit-aggrid>=0.3.4
+streamlit-option-menu>=0.3.6
+streamlit-autorefresh>=1.0.1
+altair>=5.1.0
+sqlalchemy>=2.0.0
