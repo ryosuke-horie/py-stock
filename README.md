@@ -25,6 +25,15 @@
 - **ボラティリティ**: ATR(14)、リスクレベル判定
 - **総合シグナル**: 複数指標組み合わせ売買判定
 
+**サポート・レジスタンス検出システム v1.0** 🆕
+- **SupportResistanceDetector**: 価格水準重要ポイント自動特定
+- **スイング検出**: 直近高値・安値の自動検出アルゴリズム
+- **価格クラスター**: 類似レベルのグループ化と強度評価
+- **ピボットポイント**: 標準・カマリラピボット完全対応
+- **ブレイクアウト**: リアルタイム突破判定・確認機能
+- **時間帯分析**: セッション別強度・拒否率評価
+- **出来高連動**: 出来高を考慮した信頼度スコアリング
+
 ## 🔧 インストールと使用方法
 
 ### セットアップ
@@ -86,6 +95,18 @@ python main.py --technical AAPL --interval 1d --period 3mo
 python main.py --technical MSFT --interval 1m --period 1d
 ```
 
+#### サポート・レジスタンス分析
+```bash
+# トヨタ自動車のサポレジ分析（1時間足）
+python main.py --support-resistance 7203 --interval 1h --period 1mo
+
+# Apple株の長期サポレジ分析（日足）
+python main.py --support-resistance AAPL --interval 1d --period 6mo
+
+# 短期サポレジ監視（5分足）
+python main.py --support-resistance MSFT --interval 5m --period 1d
+```
+
 ### Python APIでの使用例
 
 #### データ収集
@@ -137,6 +158,36 @@ if signals['rsi_oversold']:
     print("RSI過売りシグナル")
 if signals['macd_bullish']:
     print("MACDゴールデンクロス")
+```
+
+#### サポート・レジスタンス分析
+
+```python
+from src.technical_analysis.support_resistance import SupportResistanceDetector
+
+# データ取得後にサポレジ分析
+data = collector.get_stock_data("7203.T", interval="1h", period="1mo")
+detector = SupportResistanceDetector(data, min_touches=2, tolerance_percent=0.8)
+
+# 主要レベル検出
+levels = detector.detect_support_resistance_levels(min_strength=0.3)
+print(f"検出レベル数: {len(levels)}")
+
+# ピボットポイント計算
+pivots = detector.calculate_pivot_points('daily')
+print(f"ピボット: {pivots.pivot:.2f}")
+print(f"R1: {pivots.resistance_levels['R1']:.2f}")
+print(f"S1: {pivots.support_levels['S1']:.2f}")
+
+# ブレイクアウト検出
+breakouts = detector.detect_breakouts(levels)
+for breakout in breakouts:
+    print(f"ブレイクアウト: {breakout.level_broken:.2f}を{breakout.direction}")
+
+# 総合分析
+analysis = detector.comprehensive_analysis()
+print(f"市場状況: {analysis['market_condition']}")
+print(f"推奨事項: {analysis['trading_recommendations']}")
 ```
 
 ## 📊 データ仕様
