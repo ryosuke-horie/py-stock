@@ -2,6 +2,94 @@
 
 株式投資の投資タイミングの見極めをPython x Claude Code x MCPでやってみる試み
 
+## 🚀 実装状況
+
+### ✅ 完了済み
+
+**基盤データ収集システム v1.0**
+- **StockDataCollector**: yfinanceを使った効率的な株価データ取得
+- **SymbolManager**: 日本株・米国株の銘柄コード統一管理
+- **SettingsManager**: JSON設定管理と環境変数対応
+- **DataValidator**: データ品質検証と異常値検出機能
+- **SQLiteキャッシュ**: 取得データの永続化とパフォーマンス最適化
+- **並列処理**: 複数銘柄の効率的な並列データ取得
+- **エラーハンドリング**: リトライ機能とレート制限対応
+
+## 🔧 インストールと使用方法
+
+### セットアップ
+```bash
+# リポジトリクローン
+git clone https://github.com/ryosuke-horie/py-stock.git
+cd py-stock
+
+# Python仮想環境作成
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate  # Windows
+
+# 依存関係インストール
+pip install -r requirements.txt
+```
+
+### 基本的な使用例
+
+#### 単一銘柄データ取得
+```bash
+# トヨタ自動車の1分足データ取得
+python main.py --symbol 7203 --interval 1m
+
+# Apple株の5分足データ取得
+python main.py --symbol AAPL --interval 5m --period 1d
+```
+
+#### 複数銘柄並列取得
+```bash
+# 日本株と米国株のミックス
+python main.py --symbols 7203 9984 AAPL MSFT GOOGL --interval 5m
+
+# 日本テック株のバッチ取得
+python main.py --symbols 7203 6758 7974 9984 6861 --interval 1m
+```
+
+#### キャッシュ管理
+```bash
+# キャッシュ統計表示
+python main.py --cache-stats
+
+# 7日以上古いキャッシュクリーニング
+python main.py --clean-cache 7
+
+# サンプル銘柄表示
+python main.py --samples
+```
+
+### Python APIでの使用例
+
+```python
+from src.data_collector.stock_data_collector import StockDataCollector
+from src.data_collector.symbol_manager import SymbolManager
+from src.config.settings import settings_manager
+
+# 初期化
+collector = StockDataCollector()
+symbol_manager = SymbolManager()
+
+# 単一銘柄データ取得
+data = collector.get_stock_data("7203.T", interval="1m", period="1d")
+
+# 複数銘柄並列取得
+symbols = ["7203.T", "AAPL", "MSFT"]
+results = collector.get_multiple_stocks(symbols, interval="5m")
+
+# ウォッチリスト管理
+watchlist = symbol_manager.create_watchlist(
+    "テック株", ["7203", "6758", "AAPL", "MSFT", "GOOGL"]
+)
+```
+
+## 📊 データ仕様
+
 ## 必要そうなもの
 
 ### データ収集・処理基盤
