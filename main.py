@@ -17,6 +17,7 @@ from src.data_collector.symbol_manager import SymbolManager, MarketType
 from src.config.settings import settings_manager
 from src.utils.data_validator import DataValidator
 from src.technical_analysis.indicators import TechnicalIndicators
+from src.technical_analysis.support_resistance import SupportResistanceDetector
 from loguru import logger
 
 
@@ -253,6 +254,108 @@ def technical_analysis(symbol: str, interval: str = "5m", period: str = "1d"):
         return False
 
 
+def support_resistance_analysis(symbol: str, interval: str = "1h", period: str = "1mo"):
+    """サポート・レジスタンス分析実行"""
+    print(f"サポート・レジスタンス分析: {symbol}")
+    
+    # 初期化
+    settings_manager.setup_logging()
+    collector = StockDataCollector()
+    symbol_manager = SymbolManager()
+    
+    # 銘柄正規化
+    normalized_symbol = symbol_manager.normalize_symbol(symbol)
+    symbol_info = symbol_manager.get_symbol_info(symbol)
+    
+    print(f"銘柄情報: {symbol_info['name']} ({normalized_symbol})")
+    
+    try:
+        # データ取得
+        data = collector.get_stock_data(
+            symbol=normalized_symbol,
+            interval=interval,
+            period=period,
+            use_cache=True
+        )
+        
+        if data is None or len(data) < 30:
+            print("サポレジ分析に十分なデータがありません")
+            return False
+        
+        print(f"分析データ: {len(data)}件")
+        print(f"期間: {data['timestamp'].min()} 〜 {data['timestamp'].max()}")
+        
+        # サポレジ分析実行
+        detector = SupportResistanceDetector(data, min_touches=2, tolerance_percent=0.8)
+        analysis = detector.comprehensive_analysis()
+        
+        # 結果表示
+        current_price = analysis['current_price']
+        
+        print(f"\n🎯 サポート・レジスタンス分析結果 ({analysis['timestamp'].strftime('%Y-%m-%d %H:%M')})")
+        print("=" * 60)
+        
+        print(f"💰 現在価格: {current_price:.2f}")
+        print(f"📊 市場状況: {analysis['market_condition']}")
+        
+        # 主要サポレジレベル
+        levels = analysis['support_resistance_levels']
+        if levels:
+            print(f"\n🎯 主要サポート・レジスタンスレベル (上位6件):")
+            for i, level in enumerate(levels[:6], 1):
+                distance = ((level.price - current_price) / current_price) * 100
+                type_emoji = "🔴" if level.level_type == "resistance" else "🟢"
+                print(f"  {i}. {type_emoji} {level.level_type.upper():11} "
+                      f"{level.price:8.2f} ({distance:+5.1f}%) "
+                      f"強度:{level.strength:.2f} 信頼度:{level.confidence:.2f}")
+        
+        # ピボットポイント
+        pivots = analysis['pivot_points']
+        print(f"\n📊 ピボットポイント:")
+        print(f"  ピボット: {pivots.pivot:.2f}")
+        print(f"  レジスタンス: R1={pivots.resistance_levels['R1']:.2f} "
+              f"R2={pivots.resistance_levels['R2']:.2f} R3={pivots.resistance_levels['R3']:.2f}")
+        print(f"  サポート: S1={pivots.support_levels['S1']:.2f} "
+              f"S2={pivots.support_levels['S2']:.2f} S3={pivots.support_levels['S3']:.2f}")
+        
+        # 最寄りレベル
+        nearest_support = analysis['nearest_support']
+        nearest_resistance = analysis['nearest_resistance']
+        
+        print(f"\n📍 最寄りレベル:")
+        if nearest_support:
+            support_distance = ((current_price - nearest_support.price) / current_price) * 100
+            print(f"  🟢 サポート: {nearest_support.price:.2f} ({support_distance:.1f}%下) 強度:{nearest_support.strength:.2f}")
+        
+        if nearest_resistance:
+            resistance_distance = ((nearest_resistance.price - current_price) / current_price) * 100
+            print(f"  🔴 レジスタンス: {nearest_resistance.price:.2f} ({resistance_distance:.1f}%上) 強度:{nearest_resistance.strength:.2f}")
+        
+        # 最近のブレイクアウト
+        breakouts = analysis['recent_breakouts']
+        if breakouts:
+            print(f"\n💥 最近のブレイクアウト:")
+            for breakout in breakouts:
+                direction_emoji = "⬆️" if breakout.direction == "upward" else "⬇️"
+                confirm_emoji = "✅" if breakout.confirmed else "⚠️"
+                level_type = "レジスタンス" if breakout.level_type == "resistance" else "サポート"
+                print(f"  {direction_emoji} {confirm_emoji} {level_type}{breakout.level_broken:.2f}を"
+                      f"{breakout.price:.2f}で突破 ({breakout.timestamp.strftime('%m/%d %H:%M')})")
+        
+        # トレーディング推奨
+        recommendations = analysis['trading_recommendations']
+        if recommendations:
+            print(f"\n💡 トレーディング推奨:")
+            for i, rec in enumerate(recommendations, 1):
+                print(f"  {i}. {rec}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"サポレジ分析エラー: {e}")
+        return False
+
+
 def clean_cache(days: int = 30):
     """キャッシュクリーニング"""
     print(f"{days}日以上古いキャッシュをクリーニング")
@@ -290,6 +393,9 @@ def main():
   # テクニカル分析実行（トヨタ5分足）
   python main.py --technical 7203 --interval 5m
   
+  # サポレジ分析実行（トヨタ1時間足）
+  python main.py --support-resistance 7203 --interval 1h --period 1mo
+  
   # キャッシュ統計表示
   python main.py --cache-stats
   
@@ -305,6 +411,7 @@ def main():
     parser.add_argument("--symbol", type=str, help="単一銘柄コード")
     parser.add_argument("--symbols", nargs="+", help="複数銘柄コード")
     parser.add_argument("--technical", type=str, help="テクニカル分析対象銘柄")
+    parser.add_argument("--support-resistance", type=str, help="サポレジ分析対象銘柄")
     parser.add_argument("--interval", default="1m", 
                        choices=["1m", "2m", "5m", "15m", "30m", "1h", "1d"],
                        help="データ間隔 (デフォルト: 1m)")
@@ -334,6 +441,11 @@ def main():
         # テクニカル分析
         elif args.technical:
             success = technical_analysis(args.technical, args.interval, args.period)
+            sys.exit(0 if success else 1)
+        
+        # サポレジ分析
+        elif getattr(args, 'support_resistance', None):
+            success = support_resistance_analysis(args.support_resistance, args.interval, args.period)
             sys.exit(0 if success else 1)
         
         # キャッシュ統計
