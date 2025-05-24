@@ -13,16 +13,18 @@ import time
 
 from ..utils.dashboard_utils import DashboardUtils
 from src.data_collector.symbol_manager import SymbolManager
+from src.data_collector.watchlist_storage import WatchlistStorage
 
 
 class WatchlistComponent:
     """ウォッチリストコンポーネント"""
     
-    def __init__(self, data_collector):
+    def __init__(self, data_collector, watchlist_storage: WatchlistStorage = None):
         """初期化"""
         self.data_collector = data_collector
         self.utils = DashboardUtils()
         self.symbol_manager = SymbolManager()
+        self.watchlist_storage = watchlist_storage or WatchlistStorage()
     
     def display(self, symbols: List[str]):
         """ウォッチリスト表示"""

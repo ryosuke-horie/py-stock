@@ -29,6 +29,7 @@ from dashboard.components.charts import ChartComponent
 from dashboard.components.signals import SignalComponent
 from dashboard.components.alerts import AlertComponent
 from dashboard.components.backtest import BacktestComponent
+from src.data_collector.watchlist_storage import WatchlistStorage
 
 # ページ設定
 st.set_page_config(
@@ -110,10 +111,17 @@ class StockDashboard:
         self.data_collector = StockDataCollector()
         self.utils = DashboardUtils()
         
-        # セッション状態の初期化
-        if 'watchlist' not in st.session_state:
-            st.session_state.watchlist = ['7203.T', '6758.T', '9984.T', 'AAPL', 'MSFT']
+        # ウォッチリストストレージ初期化
+        self.watchlist_storage = WatchlistStorage()
         
+        # セッション状態の初期化
+        self._initialize_session_state()
+        
+        # データ移行処理（初回のみ）
+        self._migrate_watchlist_if_needed()
+    
+    def _initialize_session_state(self):
+        """セッション状態の初期化"""
         if 'alerts' not in st.session_state:
             st.session_state.alerts = []
         
@@ -122,9 +130,25 @@ class StockDashboard:
             
         if 'auto_refresh' not in st.session_state:
             st.session_state.auto_refresh = False
-            
+        
+        # ウォッチリストをDBから取得
+        db_watchlist = self.watchlist_storage.get_symbols()
+        if db_watchlist:
+            st.session_state.watchlist = db_watchlist
+        else:
+            # DBが空の場合のみデフォルト値を設定
+            st.session_state.watchlist = ['7203.T', '6758.T', '9984.T', 'AAPL', 'MSFT']
+        
+        # 選択銘柄をウォッチリストの最初に設定
         if 'selected_symbol' not in st.session_state:
-            st.session_state.selected_symbol = '7203.T'
+            st.session_state.selected_symbol = st.session_state.watchlist[0] if st.session_state.watchlist else '7203.T'
+    
+    def _migrate_watchlist_if_needed(self):
+        """必要に応じてウォッチリストを移行"""
+        # DBが空でセッション状態にデフォルト値がある場合、移行を実行
+        db_symbols = self.watchlist_storage.get_symbols()
+        if not db_symbols and st.session_state.watchlist:
+            self.watchlist_storage.migrate_from_session(st.session_state.watchlist)
     
     def run(self):
         """ダッシュボード実行"""
@@ -187,8 +211,14 @@ class StockDashboard:
         new_symbol = st.sidebar.text_input("銘柄コードを追加:")
         if st.sidebar.button("➕ 追加"):
             if new_symbol and new_symbol not in st.session_state.watchlist:
-                st.session_state.watchlist.append(new_symbol.upper())
-                st.rerun()
+                # DBに追加
+                if self.watchlist_storage.add_symbol(new_symbol.upper()):
+                    # 成功した場合、セッション状態も更新
+                    st.session_state.watchlist = self.watchlist_storage.get_symbols()
+                    st.success(f"銘柄を追加しました: {new_symbol.upper()}")
+                    st.rerun()
+                else:
+                    st.error(f"銘柄の追加に失敗しました: {new_symbol}")
         
         # ウォッチリスト表示と削除
         for i, symbol in enumerate(st.session_state.watchlist):
@@ -197,8 +227,14 @@ class StockDashboard:
                 st.write(symbol)
             with col2:
                 if st.button("❌", key=f"del_{i}"):
-                    st.session_state.watchlist.remove(symbol)
-                    st.rerun()
+                    # DBから削除
+                    if self.watchlist_storage.remove_symbol(symbol):
+                        # 成功した場合、セッション状態も更新
+                        st.session_state.watchlist = self.watchlist_storage.get_symbols()
+                        st.success(f"銘柄を削除しました: {symbol}")
+                        st.rerun()
+                    else:
+                        st.error(f"銘柄の削除に失敗しました: {symbol}")
         
         st.sidebar.markdown("---")
         
@@ -243,7 +279,7 @@ class StockDashboard:
         st.header("📊 市場概要")
         
         # ウォッチリスト価格表示
-        watchlist_component = WatchlistComponent(self.data_collector)
+        watchlist_component = WatchlistComponent(self.data_collector, self.watchlist_storage)
         watchlist_component.display(st.session_state.watchlist)
         
         # 市場サマリー
