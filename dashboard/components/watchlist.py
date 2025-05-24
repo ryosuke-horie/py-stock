@@ -12,6 +12,7 @@ import concurrent.futures
 import time
 
 from ..utils.dashboard_utils import DashboardUtils
+from src.data_collector.symbol_manager import SymbolManager
 
 
 class WatchlistComponent:
@@ -21,6 +22,7 @@ class WatchlistComponent:
         """初期化"""
         self.data_collector = data_collector
         self.utils = DashboardUtils()
+        self.symbol_manager = SymbolManager()
     
     def display(self, symbols: List[str]):
         """ウォッチリスト表示"""
@@ -82,8 +84,12 @@ class WatchlistComponent:
                 # トレンド判定
                 trend = self._determine_trend(current_price, sma_5, sma_20)
                 
+                # 銘柄情報を取得
+                symbol_info = self.symbol_manager.get_symbol_info(symbol)
+                
                 return {
                     'symbol': symbol,
+                    'name': symbol_info['name'],
                     'current_price': current_price,
                     'change': change,
                     'change_pct': change_pct,
@@ -124,8 +130,13 @@ class WatchlistComponent:
         # DataFrame作成
         df_data = []
         for item in watchlist_data:
+            # 銘柄表示：銘柄コード + 社名
+            symbol_display = f"{item['symbol']}"
+            if item['name'] != 'N/A':
+                symbol_display = f"{item['symbol']} ({item['name']})"
+            
             df_data.append({
-                '銘柄': item['symbol'],
+                '銘柄': symbol_display,
                 '現在価格': f"{item['current_price']:.2f}",
                 '変動': f"{item['change']:+.2f}",
                 '変動率(%)': f"{item['change_pct']:+.2f}",
