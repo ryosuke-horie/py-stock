@@ -3,9 +3,8 @@
 
 version: 2
 updates:
-  # Python依存関係の更新 (uvプロジェクトをpip ecosystemで監視)
-  # 注意: Dependabotはまだuvネイティブサポートなしのためpipとして扱う
-  - package-ecosystem: "pip"
+  # Python依存関係の更新 (uv ecosystem)
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
