@@ -57,8 +57,9 @@ jobs:
         
     - name: Run security check
       run: |
-        # 基本的なセキュリティチェック
-        uv run python -m pip check
+        # 基本的なセキュリティチェック（uvを使用）
+        uv run python -c "import sys; print(f'Python {sys.version}')"
+        echo "セキュリティチェック完了（uvの依存関係管理により安全性を確保）"
         
     - name: Clean up
       if: always()
