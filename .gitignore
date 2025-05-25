@@ -142,3 +142,8 @@ data/cache/
 *.db
 *.sqlite
 logs/
+
+# Cache and backups
+cache/backups/backup_metadata.json
+cache/backups/*.db
+cache/backups/*.db.gz
