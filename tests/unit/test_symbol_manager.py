@@ -126,8 +126,12 @@ class TestSymbolManager:
         # 一時的にINDEX_SYMBOLSを変更
         original_symbols = self.symbol_manager.INDEX_SYMBOLS.copy()
         try:
-            # テスト用のインデックスシンボルを追加
-            self.symbol_manager.INDEX_SYMBOLS["^TEST"] = {"market": "unknown"}
+            # テスト用のインデックスシンボルを追加（必要なフィールドをすべて含める）
+            self.symbol_manager.INDEX_SYMBOLS["^TEST"] = {
+                "market": "unknown", 
+                "name": "Test Index",
+                "type": "test"
+            }
             
             result = self.symbol_manager.detect_market_type("^TEST")
             # 市場が"unknown"の場合、他の判定に進むが、^で始まるので最終的にUNKNOWNになる
