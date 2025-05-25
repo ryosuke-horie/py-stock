@@ -29,6 +29,7 @@ from dashboard.components.charts import ChartComponent
 from dashboard.components.signals import SignalComponent
 from dashboard.components.alerts import AlertComponent
 from dashboard.components.backtest import BacktestComponent
+from dashboard.components.market_environment import render_market_environment_tab
 from src.data_collector.watchlist_storage import WatchlistStorage
 
 # ページ設定
@@ -159,23 +160,26 @@ class StockDashboard:
         self.setup_sidebar()
         
         # メインコンテンツ
-        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5 = st.tabs([
-            "🏠 概要", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト"
+        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
+            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト"
         ])
         
         with main_tab1:
             self.show_overview()
         
         with main_tab2:
-            self.show_chart_analysis()
+            render_market_environment_tab()
         
         with main_tab3:
-            self.show_signals()
+            self.show_chart_analysis()
         
         with main_tab4:
-            self.show_alerts()
+            self.show_signals()
         
         with main_tab5:
+            self.show_alerts()
+        
+        with main_tab6:
             self.show_backtest()
         
         # 自動更新

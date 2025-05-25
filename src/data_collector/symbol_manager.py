@@ -15,6 +15,7 @@ class SymbolManager:
     """
     銘柄コード管理クラス
     日本株・米国株の銘柄コード形式を統一的に処理
+    インデックスシンボルの管理機能を含む
     """
     
     # 日本株の主要市場コード
@@ -26,6 +27,29 @@ class SymbolManager:
     
     # 米国株の主要市場
     US_EXCHANGES = ["NYSE", "NASDAQ", "AMEX"]
+    
+    # 主要インデックスシンボル
+    INDEX_SYMBOLS = {
+        # 日本市場
+        "^N225": {"name": "日経225", "market": "japan", "type": "index"},
+        "^TOPX": {"name": "TOPIX", "market": "japan", "type": "index"},
+        "1305.T": {"name": "TOPIX ETF", "market": "japan", "type": "etf"},
+        "1321.T": {"name": "日経225 ETF", "market": "japan", "type": "etf"},
+        
+        # 米国市場
+        "^GSPC": {"name": "S&P 500", "market": "us", "type": "index"},
+        "^DJI": {"name": "ダウ平均", "market": "us", "type": "index"},
+        "^IXIC": {"name": "NASDAQ総合", "market": "us", "type": "index"},
+        "^VIX": {"name": "VIX指数", "market": "us", "type": "volatility"},
+        
+        # セクターETF（日本）
+        "1475.T": {"name": "IT・情報通信セクターETF", "market": "japan", "type": "sector_etf"},
+        "1615.T": {"name": "金融セクターETF", "market": "japan", "type": "sector_etf"},
+        "1617.T": {"name": "消費財セクターETF", "market": "japan", "type": "sector_etf"},
+        "1619.T": {"name": "資本財セクターETF", "market": "japan", "type": "sector_etf"},
+        "1621.T": {"name": "ヘルスケアセクターETF", "market": "japan", "type": "sector_etf"},
+        "1618.T": {"name": "エネルギーセクターETF", "market": "japan", "type": "sector_etf"},
+    }
     
     def __init__(self):
         # 日本の主要銘柄コード例（実際の運用では外部データソースから取得）
@@ -66,6 +90,14 @@ class SymbolManager:
         Returns:
             市場タイプ
         """
+        # インデックスシンボルのチェック
+        if symbol in self.INDEX_SYMBOLS:
+            market = self.INDEX_SYMBOLS[symbol].get("market", "unknown")
+            if market == "japan":
+                return MarketType.JAPAN
+            elif market == "us":
+                return MarketType.US
+        
         # 日本株の判定
         if self._is_japan_stock(symbol):
             return MarketType.JAPAN
@@ -79,12 +111,18 @@ class SymbolManager:
     
     def _is_japan_stock(self, symbol: str) -> bool:
         """日本株かどうかの判定"""
+        # インデックスシンボルの場合
+        if symbol.startswith('^'):
+            return False
         # 4桁数字のパターン（例: 7203, 7203.T）
         japan_pattern = r'^\d{4}(\.T|\.JP)?$'
         return bool(re.match(japan_pattern, symbol))
     
     def _is_us_stock(self, symbol: str) -> bool:
         """米国株かどうかの判定"""
+        # インデックスシンボルの場合
+        if symbol.startswith('^'):
+            return False
         # 1-5文字のアルファベット（例: AAPL, MSFT）
         us_pattern = r'^[A-Z]{1,5}$'
         return bool(re.match(us_pattern, symbol))
@@ -101,6 +139,10 @@ class SymbolManager:
             正規化された銘柄コード
         """
         symbol = symbol.upper().strip()
+        
+        # インデックスシンボルはそのまま返す
+        if symbol in self.INDEX_SYMBOLS or symbol.startswith('^'):
+            return symbol
         
         if market_type is None:
             market_type = self.detect_market_type(symbol)
@@ -264,3 +306,72 @@ class SymbolManager:
             }
         else:
             return {"market": "不明", "timezone": "UTC"}
+    
+    def is_index_symbol(self, symbol: str) -> bool:
+        """
+        インデックスシンボルかどうかを判定
+        
+        Args:
+            symbol: 銘柄コード
+            
+        Returns:
+            インデックスシンボルの場合True
+        """
+        return symbol in self.INDEX_SYMBOLS or symbol.startswith('^')
+    
+    def get_index_info(self, symbol: str) -> Optional[Dict[str, str]]:
+        """
+        インデックス情報を取得
+        
+        Args:
+            symbol: インデックスシンボル
+            
+        Returns:
+            インデックス情報（存在しない場合はNone）
+        """
+        return self.INDEX_SYMBOLS.get(symbol)
+    
+    def get_indices_by_market(self, market: str) -> List[Tuple[str, Dict[str, str]]]:
+        """
+        市場別のインデックスリストを取得
+        
+        Args:
+            market: 市場名（"japan" または "us"）
+            
+        Returns:
+            インデックスのリスト [(symbol, info), ...]
+        """
+        indices = []
+        for symbol, info in self.INDEX_SYMBOLS.items():
+            if info.get("market") == market:
+                indices.append((symbol, info))
+        return indices
+    
+    def get_sector_etfs(self, market: str = "japan") -> List[Tuple[str, Dict[str, str]]]:
+        """
+        セクターETFのリストを取得
+        
+        Args:
+            market: 市場名（デフォルトは"japan"）
+            
+        Returns:
+            セクターETFのリスト [(symbol, info), ...]
+        """
+        sector_etfs = []
+        for symbol, info in self.INDEX_SYMBOLS.items():
+            if info.get("type") == "sector_etf" and info.get("market") == market:
+                sector_etfs.append((symbol, info))
+        return sector_etfs
+    
+    def get_volatility_indices(self) -> List[Tuple[str, Dict[str, str]]]:
+        """
+        ボラティリティ指数のリストを取得
+        
+        Returns:
+            ボラティリティ指数のリスト [(symbol, info), ...]
+        """
+        vol_indices = []
+        for symbol, info in self.INDEX_SYMBOLS.items():
+            if info.get("type") == "volatility":
+                vol_indices.append((symbol, info))
+        return vol_indices
