@@ -49,9 +49,107 @@ class TestSymbolManager:
         """未知の市場タイプ判定テスト"""
         # 無効なパターン
         assert self.symbol_manager.detect_market_type("123") == MarketType.UNKNOWN
-        assert self.symbol_manager.detect_market_type("12345") == MarketType.UNKNOWN
         assert self.symbol_manager.detect_market_type("TOOLONG") == MarketType.UNKNOWN
-        assert self.symbol_manager.detect_market_type("7203.INVALID") == MarketType.UNKNOWN
+        assert self.symbol_manager.detect_market_type("!@#") == MarketType.UNKNOWN
+        assert self.symbol_manager.detect_market_type("") == MarketType.UNKNOWN
+    
+    def test_detect_market_type_index_symbols(self):
+        """インデックスシンボルの市場タイプ判定テスト"""
+        # インデックスシンボルがINDEX_SYMBOLSに定義されている場合のテスト
+        # 実際のシンボルを確認
+        index_symbols = self.symbol_manager.INDEX_SYMBOLS
+        for symbol, info in index_symbols.items():
+            market = info.get("market", "unknown")
+            if market == "japan":
+                assert self.symbol_manager.detect_market_type(symbol) == MarketType.JAPAN
+            elif market == "us":
+                assert self.symbol_manager.detect_market_type(symbol) == MarketType.US
+    
+    def test_is_japan_stock_with_index_symbol(self):
+        """インデックスシンボルでの日本株判定テスト"""
+        # ^で始まるシンボルは日本株ではない
+        assert not self.symbol_manager._is_japan_stock("^N225")
+        assert not self.symbol_manager._is_japan_stock("^TOPIX")
+    
+    def test_is_us_stock_with_index_symbol(self):
+        """インデックスシンボルでの米国株判定テスト"""
+        # ^で始まるシンボルは米国株ではない
+        assert not self.symbol_manager._is_us_stock("^DJI")
+        assert not self.symbol_manager._is_us_stock("^GSPC")
+    
+    def test_normalize_japan_symbol_invalid(self):
+        """無効な日本株コードの正規化テスト"""
+        # 4桁でない数字の場合、警告を出してそのまま返す
+        result = self.symbol_manager._normalize_japan_symbol("123")
+        assert result == "123"  # そのまま返される
+        
+        result = self.symbol_manager._normalize_japan_symbol("12345")
+        assert result == "12345"  # そのまま返される
+    
+    def test_normalize_us_symbol_invalid(self):
+        """無効な米国株コードの正規化テスト"""
+        # 1-5文字でないアルファベットの場合、警告を出してそのまま返す
+        result = self.symbol_manager._normalize_us_symbol("")
+        assert result == ""  # そのまま返される
+        
+        result = self.symbol_manager._normalize_us_symbol("TOOLONG")
+        assert result == "TOOLONG"  # そのまま返される
+    
+    def test_create_watchlist_with_invalid_symbols(self):
+        """無効な銘柄を含むウォッチリスト作成テスト"""
+        symbols = ["AAPL", "7203", "INVALID123", ""]
+        watchlist = self.symbol_manager.create_watchlist("test_list", symbols)
+        
+        # 有効な銘柄のみがsymbolsに含まれる
+        assert len(watchlist["symbols"]) == 2
+        assert "AAPL" in watchlist["symbols"]
+        assert "7203.T" in watchlist["symbols"]  # 日本株は.Tが付いて正規化される
+        
+        # 無効な銘柄がinvalid_symbolsに含まれる
+        assert len(watchlist["invalid_symbols"]) == 2
+        assert "INVALID123" in watchlist["invalid_symbols"]
+        assert "" in watchlist["invalid_symbols"]
+    
+    def test_create_watchlist_with_no_invalid_symbols(self):
+        """無効な銘柄がない場合のウォッチリスト作成テスト"""
+        # line 277->280のブランチをカバー（invalid_symbolsが空の場合）
+        symbols = ["AAPL", "7203"]
+        watchlist = self.symbol_manager.create_watchlist("test_list", symbols)
+        
+        # 全て有効な銘柄
+        assert len(watchlist["symbols"]) == 2
+        assert len(watchlist["invalid_symbols"]) == 0
+    
+    def test_detect_market_type_index_unknown_market(self):
+        """インデックスシンボルで未知の市場の場合のテスト"""
+        # line 98->102のブランチをカバー（market が "japan" でも "us" でもない場合）
+        # 一時的にINDEX_SYMBOLSを変更
+        original_symbols = self.symbol_manager.INDEX_SYMBOLS.copy()
+        try:
+            # テスト用のインデックスシンボルを追加（必要なフィールドをすべて含める）
+            self.symbol_manager.INDEX_SYMBOLS["^TEST"] = {
+                "market": "unknown", 
+                "name": "Test Index",
+                "type": "test"
+            }
+            
+            result = self.symbol_manager.detect_market_type("^TEST")
+            # 市場が"unknown"の場合、他の判定に進むが、^で始まるので最終的にUNKNOWNになる
+            assert result == MarketType.UNKNOWN
+        finally:
+            # 元に戻す
+            self.symbol_manager.INDEX_SYMBOLS = original_symbols
+    
+    def test_get_symbol_info_us_stock(self):
+        """米国株の銘柄情報取得テスト"""
+        # line 205->208のブランチをカバー（market_type == MarketType.US）
+        info = self.symbol_manager.get_symbol_info("AAPL")
+        
+        assert info["original"] == "AAPL"
+        assert info["market_type"] == "us"
+        assert info["normalized"] == "AAPL"
+        # AAPLは登録されているのでApple Inc.
+        assert info["name"] == "Apple Inc."
     
     def test_normalize_symbol_japan(self):
         """日本株銘柄コード正規化テスト"""

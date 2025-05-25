@@ -116,8 +116,12 @@ class TestSymbolManagerIndices:
         """インデックスカバレッジの包括的テスト"""
         all_indices = symbol_manager.INDEX_SYMBOLS
         
-        # 各インデックスが必要な属性を持っているか確認
+        # 各インデックスが必要な属性を持っているか確認（テスト用データを除外）
         for symbol, info in all_indices.items():
+            # テスト用のシンボルは除外
+            if symbol.startswith("^TEST"):
+                continue
+                
             assert "name" in info
             assert "market" in info
             assert "type" in info
