@@ -3,7 +3,8 @@
 
 version: 2
 updates:
-  # Python依存関係の更新 (uv/pip ecosystem)
+  # Python依存関係の更新 (uvプロジェクトをpip ecosystemで監視)
+  # 注意: Dependabotはまだuvネイティブサポートなしのためpipとして扱う
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -17,7 +18,7 @@ updates:
     assignees:
       - "ryosuke-horie"
     commit-message:
-      prefix: "deps"
+      prefix: "deps(uv)"
       include: "scope"
     open-pull-requests-limit: 5
     # セキュリティアップデートは即座に作成
