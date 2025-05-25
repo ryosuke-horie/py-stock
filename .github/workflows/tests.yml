@@ -12,18 +12,14 @@ jobs:
   test:
     runs-on: self-hosted
     
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.13
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.13"
         
     - name: Install uv
       uses: astral-sh/setup-uv@v3
@@ -50,33 +46,12 @@ jobs:
           --cov=src \
           --cov-branch \
           --cov-report=term-missing \
-          --cov-report=xml \
-          --cov-report=html:htmlcov \
           --cov-fail-under=30 \
           -v
-          
-    - name: Upload coverage reports to Codecov
-      if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-        
-    - name: Archive coverage reports
-      if: matrix.python-version == '3.11'
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-report
-        path: |
-          coverage.xml
-          htmlcov/
-        retention-days: 30
         
     - name: Run security check
       run: |
-        # 基本的なセキュリティチェック（uvでは専用ツールは無いため簡易的に）
+        # 基本的なセキュリティチェック
         uv run python -m pip check
         
     - name: Clean up
