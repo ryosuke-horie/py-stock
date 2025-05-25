@@ -1,0 +1,86 @@
+# 単体テスト自動実行のCIワークフロー
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        
+    - name: Create virtual environment
+      run: uv venv
+      
+    - name: Sync dependencies
+      run: uv sync --extra dev
+      
+    - name: Run linting with flake8
+      run: |
+        uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        
+    - name: Run type checking with mypy
+      run: uv run mypy src/
+      
+    - name: Run tests with pytest
+      run: |
+        uv run pytest tests/ \
+          --cov=src \
+          --cov-branch \
+          --cov-report=term-missing \
+          --cov-report=xml \
+          --cov-report=html:htmlcov \
+          --cov-fail-under=30 \
+          -v
+          
+    - name: Upload coverage reports to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        
+    - name: Archive coverage reports
+      if: matrix.python-version == '3.11'
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+        retention-days: 30
+        
+    - name: Run security check
+      run: |
+        # 基本的なセキュリティチェック（uvでは専用ツールは無いため簡易的に）
+        uv run python -m pip check
+        
+    - name: Clean up
+      if: always()
+      run: |
+        # 仮想環境のクリーンアップ
+        rm -rf .venv
