@@ -264,6 +264,45 @@ class StockDashboard:
         st.session_state.period = period
         st.session_state.interval = interval
         
+        # バックアップ管理
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 💾 バックアップ")
+        
+        # バックアップ統計表示
+        backup_info = self.watchlist_storage.get_backup_info()
+        if backup_info:
+            st.sidebar.info(f"""
+            **バックアップ数**: {backup_info.get('total_count', 0)}個  
+            **使用容量**: {backup_info.get('disk_usage_mb', 0)}MB  
+            **最新**: {backup_info.get('latest_backup', 'なし')[:10] if backup_info.get('latest_backup') else 'なし'}
+            """)
+        
+        # 手動バックアップボタン
+        if st.sidebar.button("💾 今すぐバックアップ"):
+            with st.spinner("バックアップ作成中..."):
+                backup_path = self.watchlist_storage.create_manual_backup()
+                if backup_path:
+                    st.sidebar.success("✅ バックアップ作成完了")
+                else:
+                    st.sidebar.error("❌ バックアップ作成失敗")
+        
+        # バックアップ一覧表示（展開可能）
+        with st.sidebar.expander("📋 バックアップ一覧", expanded=False):
+            backups = self.watchlist_storage.list_available_backups()
+            if backups:
+                for backup in backups[:5]:  # 最新5件表示
+                    backup_time = backup.created_at.strftime("%m/%d %H:%M")
+                    backup_type_icon = {
+                        'auto': '🔄',
+                        'manual': '👤', 
+                        'before_operation': '⚠️'
+                    }.get(backup.backup_type, '📁')
+                    
+                    st.sidebar.text(f"{backup_type_icon} {backup_time}")
+                    st.sidebar.text(f"  {backup.operation_context or backup.backup_type}")
+            else:
+                st.sidebar.text("バックアップがありません")
+        
         # システム情報
         st.sidebar.markdown("---")
         st.sidebar.markdown("### ℹ️ システム情報")

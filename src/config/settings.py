@@ -28,6 +28,11 @@ class DatabaseConfig:
     backup_enabled: bool = True
     backup_interval_hours: int = 24
     vacuum_interval_days: int = 7
+    backup_dir: str = "cache/backups"
+    backup_before_operations: List[str] = field(default_factory=lambda: ["remove", "clear", "reorder"])
+    backup_retention_count: int = 10
+    backup_compression_enabled: bool = False
+    daily_backup_enabled: bool = True
 
 
 @dataclass

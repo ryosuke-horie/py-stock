@@ -12,6 +12,8 @@ import logging
 from dataclasses import dataclass
 
 from .symbol_manager import SymbolManager, MarketType
+from .backup_manager import BackupManager, BackupConfig
+from ..config.settings import DatabaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +32,40 @@ class WatchlistItem:
 class WatchlistStorage:
     """ウォッチリストデータストレージクラス"""
     
-    def __init__(self, db_path: str = "cache/watchlist.db", user_id: str = "default_user"):
+    def __init__(self, 
+                 db_path: str = "cache/watchlist.db", 
+                 user_id: str = "default_user",
+                 db_config: DatabaseConfig = None):
         """
         初期化
         
         Args:
             db_path: データベースファイルパス
             user_id: ユーザーID（将来の複数ユーザー対応用）
+            db_config: データベース設定
         """
         self.db_path = db_path
         self.user_id = user_id
         self.symbol_manager = SymbolManager()
+        
+        # バックアップ設定とマネージャー初期化
+        self.db_config = db_config or DatabaseConfig()
+        backup_config = BackupConfig(
+            backup_enabled=self.db_config.backup_enabled,
+            backup_dir=self.db_config.backup_dir,
+            backup_before_operations=self.db_config.backup_before_operations,
+            backup_retention_count=self.db_config.backup_retention_count,
+            backup_compression_enabled=self.db_config.backup_compression_enabled,
+            daily_backup_enabled=self.db_config.daily_backup_enabled,
+            backup_interval_hours=self.db_config.backup_interval_hours
+        )
+        self.backup_manager = BackupManager(backup_config)
+        
         self.ensure_db_directory()
         self.initialize_database()
+        
+        # 日次バックアップチェック
+        self._check_daily_backup()
     
     def ensure_db_directory(self):
         """データベースディレクトリ確保"""
@@ -148,6 +171,9 @@ class WatchlistStorage:
             成功した場合True
         """
         try:
+            # 操作前バックアップ
+            self._backup_before_operation("remove", f"銘柄削除: {symbol}")
+            
             # 銘柄コードを正規化
             normalized_symbol = self.symbol_manager.normalize_symbol(symbol)
             
@@ -265,6 +291,8 @@ class WatchlistStorage:
             成功した場合True
         """
         try:
+            # 操作前バックアップ
+            self._backup_before_operation("reorder", f"順序変更: {len(symbol_order)}銘柄")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
@@ -324,6 +352,8 @@ class WatchlistStorage:
             成功した場合True
         """
         try:
+            # 操作前バックアップ
+            self._backup_before_operation("clear", "ウォッチリストクリア")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
@@ -384,3 +414,110 @@ class WatchlistStorage:
         except Exception as e:
             logger.error(f"統計取得エラー: {e}")
             return {}
+    
+    def _backup_before_operation(self, operation: str, context: str):
+        """
+        操作前バックアップ
+        
+        Args:
+            operation: 操作名
+            context: 操作コンテキスト
+        """
+        try:
+            if operation in self.db_config.backup_before_operations:
+                backup_path = self.backup_manager.create_backup(
+                    self.db_path,
+                    backup_type="before_operation",
+                    operation_context=context
+                )
+                if backup_path:
+                    logger.debug(f"操作前バックアップ作成: {backup_path}")
+                    # 古いバックアップをクリーンアップ
+                    self.backup_manager.cleanup_old_backups("watchlist")
+        except Exception as e:
+            logger.warning(f"操作前バックアップエラー: {e}")
+    
+    def _check_daily_backup(self):
+        """
+        日次バックアップのチェックと実行
+        """
+        try:
+            if self.backup_manager.should_create_daily_backup(self.db_path):
+                backup_path = self.backup_manager.create_backup(
+                    self.db_path,
+                    backup_type="auto",
+                    operation_context="日次自動バックアップ"
+                )
+                if backup_path:
+                    logger.info(f"日次自動バックアップ作成: {backup_path}")
+                    # 古いバックアップをクリーンアップ
+                    self.backup_manager.cleanup_old_backups("watchlist")
+        except Exception as e:
+            logger.warning(f"日次バックアップエラー: {e}")
+    
+    def create_manual_backup(self) -> Optional[str]:
+        """
+        手動バックアップ作成
+        
+        Returns:
+            作成されたバックアップファイルパス（失敗時はNone）
+        """
+        try:
+            backup_path = self.backup_manager.create_backup(
+                self.db_path,
+                backup_type="manual",
+                operation_context="ユーザー手動バックアップ"
+            )
+            if backup_path:
+                logger.info(f"手動バックアップ作成: {backup_path}")
+                # 古いバックアップをクリーンアップ
+                self.backup_manager.cleanup_old_backups("watchlist")
+            return backup_path
+        except Exception as e:
+            logger.error(f"手動バックアップエラー: {e}")
+            return None
+    
+    def get_backup_info(self) -> Dict[str, Any]:
+        """
+        バックアップ情報取得
+        
+        Returns:
+            バックアップ統計情報
+        """
+        try:
+            return self.backup_manager.get_backup_statistics("watchlist")
+        except Exception as e:
+            logger.error(f"バックアップ情報取得エラー: {e}")
+            return {}
+    
+    def list_available_backups(self):
+        """
+        利用可能なバックアップ一覧取得
+        
+        Returns:
+            バックアップ情報リスト
+        """
+        try:
+            return self.backup_manager.list_backups("watchlist")
+        except Exception as e:
+            logger.error(f"バックアップ一覧取得エラー: {e}")
+            return []
+    
+    def restore_from_backup(self, backup_path: str) -> bool:
+        """
+        バックアップからの復元
+        
+        Args:
+            backup_path: バックアップファイルパス
+            
+        Returns:
+            復元成功の場合True
+        """
+        try:
+            result = self.backup_manager.restore_backup(backup_path, self.db_path)
+            if result:
+                logger.info(f"バックアップ復元完了: {backup_path}")
+            return result
+        except Exception as e:
+            logger.error(f"バックアップ復元エラー: {e}")
+            return False
