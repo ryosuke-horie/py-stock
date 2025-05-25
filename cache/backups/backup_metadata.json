@@ -1,0 +1,32 @@
+{
+  "backups": [
+    {
+      "file_path": "cache/backups/tmphyynf5vs_auto_20250525_122014.db",
+      "created_at": "2025-05-25T12:20:14.956971",
+      "file_size": 24576,
+      "is_compressed": false,
+      "original_db_path": "/var/folders/sq/rxs6kphj17g1wwx8wz42v06r0000gn/T/tmphyynf5vs.db",
+      "backup_type": "auto",
+      "operation_context": "日次自動バックアップ"
+    },
+    {
+      "file_path": "cache/backups/tmphyynf5vs_manual_20250525_122014.db",
+      "created_at": "2025-05-25T12:20:14.958605",
+      "file_size": 24576,
+      "is_compressed": false,
+      "original_db_path": "/var/folders/sq/rxs6kphj17g1wwx8wz42v06r0000gn/T/tmphyynf5vs.db",
+      "backup_type": "manual",
+      "operation_context": "ユーザー手動バックアップ"
+    },
+    {
+      "file_path": "cache/backups/tmphyynf5vs_before_operation_20250525_122014.db",
+      "created_at": "2025-05-25T12:20:14.959135",
+      "file_size": 24576,
+      "is_compressed": false,
+      "original_db_path": "/var/folders/sq/rxs6kphj17g1wwx8wz42v06r0000gn/T/tmphyynf5vs.db",
+      "backup_type": "before_operation",
+      "operation_context": "銘柄削除: AAPL"
+    }
+  ],
+  "last_updated": "2025-05-25T12:20:14.959185"
+}
