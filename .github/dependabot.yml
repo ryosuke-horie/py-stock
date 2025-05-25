@@ -1,0 +1,72 @@
+# Dependabot設定ファイル
+# 依存関係の自動更新を管理します
+
+version: 2
+updates:
+  # Python依存関係の更新 (uv ecosystem)
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    target-branch: "main"
+    reviewers:
+      - "ryosuke-horie"
+    assignees:
+      - "ryosuke-horie"
+    commit-message:
+      prefix: "deps(uv)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    # セキュリティアップデートは即座に作成
+    allow:
+      - dependency-type: "all"
+    # 互換性のない変更は除外
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # TypeScript/Node.js依存関係の更新 (MCP servers)
+  - package-ecosystem: "npm"
+    directory: "/mcp-servers/stock-data"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    target-branch: "main"
+    reviewers:
+      - "ryosuke-horie"
+    assignees:
+      - "ryosuke-horie"
+    commit-message:
+      prefix: "deps(mcp)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    # セキュリティアップデートは即座に作成
+    allow:
+      - dependency-type: "all"
+    # 互換性のない変更は除外
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions workflows の依存関係更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:00"
+      timezone: "Asia/Tokyo"
+    target-branch: "main"
+    reviewers:
+      - "ryosuke-horie"
+    assignees:
+      - "ryosuke-horie"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    open-pull-requests-limit: 3
