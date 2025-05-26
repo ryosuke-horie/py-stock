@@ -1174,6 +1174,10 @@ dev = [
 ]
 
 [package.dev-dependencies]
+dashboard = [
+    { name = "plotly" },
+    { name = "streamlit" },
+]
 dev = [
     { name = "black" },
     { name = "flake8" },
@@ -1218,6 +1222,10 @@ requires-dist = [
 provides-extras = ["dashboard", "dev", "all"]
 
 [package.metadata.requires-dev]
+dashboard = [
+    { name = "plotly", specifier = ">=6.1.1" },
+    { name = "streamlit", specifier = ">=1.45.1" },
+]
 dev = [
     { name = "black", specifier = ">=23.0.0" },
     { name = "flake8", specifier = ">=6.0.0" },

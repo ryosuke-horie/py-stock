@@ -194,3 +194,9 @@ markers = [
     "e2e: marks tests as end-to-end tests",
 ]
 asyncio_default_fixture_loop_scope = "function"
+
+[dependency-groups]
+dashboard = [
+    "plotly>=6.1.1",
+    "streamlit>=1.45.1",
+]
