@@ -30,7 +30,7 @@ jobs:
       run: uv venv
       
     - name: Sync dependencies
-      run: uv sync --extra dev
+      run: uv sync --extra all
       
     - name: Run linting with flake8
       run: |
