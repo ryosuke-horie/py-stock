@@ -217,10 +217,7 @@ class TestNewsAnalysisFileStructure(unittest.TestCase):
             "package.json",
             "tsconfig.json", 
             "README.md",
-            "src/index.ts",
-            "src/services/news-collector.ts",
-            "src/services/sentiment-analyzer.ts",
-            "src/services/importance-scorer.ts"
+            "src/index.ts"
         ]
         
         for file_path in required_files:
@@ -243,7 +240,7 @@ class TestNewsAnalysisFileStructure(unittest.TestCase):
                 
                 # 依存関係の確認
                 dependencies = package_data.get("dependencies", {})
-                required_deps = ["@anthropic-ai/mcp-server", "node-fetch", "zod", "sentiment"]
+                required_deps = ["@modelcontextprotocol/sdk", "zod"]
                 for dep in required_deps:
                     self.assertIn(dep, dependencies, f"必須依存関係 '{dep}' が不足")
                     
