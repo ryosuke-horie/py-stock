@@ -98,6 +98,9 @@ class TestIntelligentAlertSystem:
         adjusted_value = alert.conditions[0].threshold.current_value
         assert adjusted_value == pytest.approx(original_value * 1.5, rel=0.01)
         
+        # 基準値に戻す
+        alert.conditions[0].threshold.current_value = original_value
+        
         # レンジ相場で調整
         alert_system.adjust_thresholds("TEST", MarketCondition.CONSOLIDATION)
         
@@ -152,7 +155,16 @@ class TestIntelligentAlertSystem:
             {'type': 'volume_ratio', 'threshold': 2.0, 'operator': 'greater'}
         ]
         
-        alert_id = alert_system.create_composite_alert("TEST", conditions, min_conditions=2)
+        alert_id = alert_system.create_composite_alert(
+            "TEST", 
+            conditions, 
+            min_conditions=2,
+            priority_rules={
+                1: AlertPriority.LOW,
+                2: AlertPriority.MEDIUM,
+                3: AlertPriority.HIGH
+            }
+        )
         
         # 評価データ
         market_data = {'price': 110.0, 'volume_ratio': 2.5}
@@ -297,9 +309,9 @@ class TestIntelligentAlertSystem:
         assert summary['total_active'] == 3
         assert summary['by_symbol']['TEST1'] == 2
         assert summary['by_symbol']['TEST2'] == 1
-        assert summary['by_priority']['high'] == 1
-        assert summary['by_priority']['medium'] == 1
-        assert summary['by_priority']['low'] == 1
+        assert summary['by_priority'][AlertPriority.HIGH.value] == 1
+        assert summary['by_priority'][AlertPriority.MEDIUM.value] == 1
+        assert summary['by_priority'][AlertPriority.LOW.value] == 1
         assert len(summary['recent_alerts']) == 3
     
     def test_dynamic_threshold_range(self, alert_system):

@@ -108,9 +108,15 @@ class IntelligentAlertSystem:
             return MarketCondition.NORMAL
             
         # ボラティリティ計算（ATR使用）
-        high_low = data['High'] - data['Low']
-        high_close = abs(data['High'] - data['Close'].shift(1))
-        low_close = abs(data['Low'] - data['Close'].shift(1))
+        # カラム名の大文字小文字を統一
+        data_cols = data.columns
+        high_col = 'High' if 'High' in data_cols else 'high'
+        low_col = 'Low' if 'Low' in data_cols else 'low'
+        close_col = 'Close' if 'Close' in data_cols else 'close'
+        
+        high_low = data[high_col] - data[low_col]
+        high_close = abs(data[high_col] - data[close_col].shift(1))
+        low_close = abs(data[low_col] - data[close_col].shift(1))
         
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
         atr = true_range.rolling(window=14).mean()
@@ -118,7 +124,7 @@ class IntelligentAlertSystem:
         avg_atr = atr.mean()
         
         # 価格変動率
-        returns = data['Close'].pct_change()
+        returns = data[close_col].pct_change()
         current_volatility = returns.rolling(window=20).std().iloc[-1]
         avg_volatility = returns.rolling(window=20).std().mean()
         

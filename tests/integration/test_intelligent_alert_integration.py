@@ -40,7 +40,7 @@ class TestIntelligentAlertIntegration:
         """インジケーターとの統合テスト"""
         # システム初期化
         alert_system = IntelligentAlertSystem()
-        indicators = TechnicalIndicators()
+        indicators = TechnicalIndicators(mock_stock_data)
         
         # データをインジケーター用に変換
         data_for_indicators = mock_stock_data.rename(columns={
@@ -114,7 +114,7 @@ class TestIntelligentAlertIntegration:
         """完全なアラートワークフローのテスト"""
         # システム初期化
         alert_system = IntelligentAlertSystem()
-        indicators = TechnicalIndicators()
+        indicators = TechnicalIndicators(mock_stock_data)
         
         # データ準備
         symbol = "WORKFLOW_TEST"
