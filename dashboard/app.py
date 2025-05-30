@@ -35,6 +35,7 @@ from dashboard.components.tax_calculation import render_tax_calculation_tab
 from dashboard.components.fundamental_analysis import render_fundamental_analysis_tab
 from dashboard.components.investment_story import render_investment_story_tab
 from dashboard.components.portfolio_analysis import render_portfolio_analysis_tab
+from dashboard.components.performance_tracking import render_performance_tracking_tab
 from src.data_collector.watchlist_storage import WatchlistStorage
 
 # ページ設定
@@ -165,8 +166,8 @@ class StockDashboard:
         self.setup_sidebar()
         
         # メインコンテンツ
-        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8, main_tab9, main_tab10, main_tab11 = st.tabs([
-            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト", "📊 ファンダメンタルズ", "⚖️ ポートフォリオ", "📖 投資ストーリー"
+        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8, main_tab9, main_tab10, main_tab11, main_tab12 = st.tabs([
+            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト", "📊 ファンダメンタルズ", "⚖️ ポートフォリオ", "📖 投資ストーリー", "📈 パフォーマンス追跡"
         ])
         
         with main_tab1:
@@ -201,6 +202,9 @@ class StockDashboard:
         
         with main_tab11:
             render_investment_story_tab()
+        
+        with main_tab12:
+            render_performance_tracking_tab()
         
         # 自動更新
         if st.session_state.auto_refresh:
