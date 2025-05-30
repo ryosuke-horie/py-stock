@@ -87,7 +87,7 @@ class RiskManager:
         self.positions: Dict[str, Position] = {}
         self.daily_pnl = 0.0
         self.trade_history = []
-        self.technical_indicators = TechnicalIndicators()
+        self.technical_indicators = None  # 必要時に初期化
         
         logger.info(f"RiskManager initialized with capital: ¥{initial_capital:,.0f}")
     
@@ -159,15 +159,23 @@ class RiskManager:
                     return entry_price * (1 + self.risk_params.stop_loss_pct / 100)
             
             elif stop_type == StopLossType.ATR_BASED:
-                atr = self.technical_indicators.calculate_atr(data)
-                if atr.empty:
+                try:
+                    # TechnicalIndicatorsを動的に初期化
+                    if self.technical_indicators is None:
+                        self.technical_indicators = TechnicalIndicators(data)
+                    
+                    atr = self.technical_indicators.calculate_atr(data)
+                    if atr.empty:
+                        return self.calculate_stop_loss(data, entry_price, side, StopLossType.FIXED_PERCENTAGE)
+                    
+                    atr_value = atr.iloc[-1]
+                    if side == PositionSide.LONG:
+                        return entry_price - (atr_value * self.risk_params.atr_multiplier)
+                    else:
+                        return entry_price + (atr_value * self.risk_params.atr_multiplier)
+                except Exception as e:
+                    logger.warning(f"Error calculating ATR-based stop loss: {e}")
                     return self.calculate_stop_loss(data, entry_price, side, StopLossType.FIXED_PERCENTAGE)
-                
-                atr_value = atr.iloc[-1]
-                if side == PositionSide.LONG:
-                    return entry_price - (atr_value * self.risk_params.atr_multiplier)
-                else:
-                    return entry_price + (atr_value * self.risk_params.atr_multiplier)
             
             elif stop_type == StopLossType.SUPPORT_RESISTANCE:
                 # サポート・レジスタンスレベルベース（簡易実装）
