@@ -384,4 +384,4 @@ uv sync --extra dashboard
 uv run streamlit run dashboard/app.py
 ```
 
-ブラウザで http://localhost:8501 にアクセスして、株式取引分析ダッシュボードを開始！
+ブラウザで http://localhost:8501 にアクセスして、株式取引分析ダッシュボードを開始！# CI再実行のための軽微な修正
