@@ -164,15 +164,28 @@ class RiskManager:
                     if self.technical_indicators is None:
                         self.technical_indicators = TechnicalIndicators(data)
                     
-                    atr = self.technical_indicators.calculate_atr(data)
-                    if atr.empty:
+                    # ATR計算（14期間をデフォルトとして使用）
+                    atr_period = 14
+                    atr = self.technical_indicators.atr(atr_period)
+                    
+                    # ATRデータの有効性をチェック
+                    if atr.empty or atr.dropna().empty:
+                        logger.warning("ATR calculation returned empty data, using fixed percentage")
                         return self.calculate_stop_loss(data, entry_price, side, StopLossType.FIXED_PERCENTAGE)
                     
-                    atr_value = atr.iloc[-1]
+                    # 最新の有効なATR値を取得
+                    valid_atr = atr.dropna()
+                    if len(valid_atr) == 0:
+                        logger.warning("No valid ATR values found, using fixed percentage")
+                        return self.calculate_stop_loss(data, entry_price, side, StopLossType.FIXED_PERCENTAGE)
+                    
+                    atr_value = valid_atr.iloc[-1]
+                    
                     if side == PositionSide.LONG:
                         return entry_price - (atr_value * self.risk_params.atr_multiplier)
                     else:
                         return entry_price + (atr_value * self.risk_params.atr_multiplier)
+                        
                 except Exception as e:
                     logger.warning(f"Error calculating ATR-based stop loss: {e}")
                     return self.calculate_stop_loss(data, entry_price, side, StopLossType.FIXED_PERCENTAGE)
