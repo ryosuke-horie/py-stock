@@ -1,0 +1,75 @@
+{
+  "data_collector": {
+    "cache_dir": "cache",
+    "max_workers": 5,
+    "min_request_interval": 0.1,
+    "cache_expire_hours": 1,
+    "default_interval": "1m",
+    "default_period": "1d",
+    "retry_attempts": 3,
+    "retry_min_wait": 4,
+    "retry_max_wait": 10
+  },
+  "database": {
+    "type": "sqlite",
+    "path": "cache/stock_data.db",
+    "backup_enabled": true,
+    "backup_interval_hours": 24,
+    "vacuum_interval_days": 7
+  },
+  "logging": {
+    "level": "INFO",
+    "log_dir": "logs",
+    "file_rotation": "1 day",
+    "file_retention": "30 days",
+    "console_enabled": true,
+    "file_enabled": true
+  },
+  "scheduler": {
+    "enabled": false,
+    "timezone": "Asia/Tokyo",
+    "data_update_intervals": {
+      "1m": "*/1 * * * *",
+      "5m": "*/5 * * * *",
+      "1h": "0 * * * *",
+      "1d": "0 9 * * *"
+    }
+  },
+  "api": {
+    "yfinance_enabled": true,
+    "rate_limit_per_minute": 100,
+    "timeout_seconds": 30,
+    "user_agent": "py-stock-data-collector/1.0"
+  },
+  "tax_calculator": {
+    "capital_gains_tax_rate": 0.20315,
+    "nisa_annual_limit": 1200000,
+    "tsumitate_nisa_annual_limit": 400000,
+    "default_broker": "sbi",
+    "loss_carryforward_years": 3,
+    "decimal_places": 2
+  },
+  "default_watchlists": {
+    "日本株主要銘柄": [
+      "7203.T",
+      "9984.T",
+      "6758.T",
+      "7974.T",
+      "9983.T"
+    ],
+    "米国株GAFAM": [
+      "AAPL",
+      "MSFT",
+      "GOOGL",
+      "AMZN",
+      "META"
+    ],
+    "半導体関連": [
+      "NVDA",
+      "TSM",
+      "INTC",
+      "6861.T",
+      "6954.T"
+    ]
+  }
+}

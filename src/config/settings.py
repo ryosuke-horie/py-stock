@@ -69,6 +69,24 @@ class APIConfig:
 
 
 @dataclass
+class TaxCalculatorConfig:
+    """税務・コスト計算設定"""
+    # 税率設定（日本の税制）
+    capital_gains_tax_rate: float = 0.20315  # 所得税15% + 住民税5% + 復興特別所得税0.315%
+    nisa_annual_limit: int = 1200000  # 新NISA年間投資枠（120万円）
+    tsumitate_nisa_annual_limit: int = 400000  # つみたてNISA年間投資枠（40万円）
+    
+    # 証券会社手数料設定
+    default_broker: str = "sbi"  # デフォルト証券会社
+    
+    # 損益通算設定
+    loss_carryforward_years: int = 3  # 損失繰越可能年数
+    
+    # 計算精度設定
+    decimal_places: int = 2  # 計算結果の小数点以下桁数
+
+
+@dataclass
 class AppSettings:
     """アプリケーション全体設定"""
     data_collector: DataCollectorConfig = field(default_factory=DataCollectorConfig)
@@ -76,6 +94,7 @@ class AppSettings:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
     api: APIConfig = field(default_factory=APIConfig)
+    tax_calculator: TaxCalculatorConfig = field(default_factory=TaxCalculatorConfig)
     
     # デフォルトウォッチリスト
     default_watchlists: Dict[str, List[str]] = field(default_factory=lambda: {
@@ -174,6 +193,11 @@ class SettingsManager:
             api_config = config_dict["api"]
             settings.api = APIConfig(**api_config)
         
+        # 税務計算設定
+        if "tax_calculator" in config_dict:
+            tax_config = config_dict["tax_calculator"]
+            settings.tax_calculator = TaxCalculatorConfig(**tax_config)
+        
         # ウォッチリスト
         if "default_watchlists" in config_dict:
             settings.default_watchlists = config_dict["default_watchlists"]
@@ -222,6 +246,14 @@ class SettingsManager:
                 "rate_limit_per_minute": settings.api.rate_limit_per_minute,
                 "timeout_seconds": settings.api.timeout_seconds,
                 "user_agent": settings.api.user_agent
+            },
+            "tax_calculator": {
+                "capital_gains_tax_rate": settings.tax_calculator.capital_gains_tax_rate,
+                "nisa_annual_limit": settings.tax_calculator.nisa_annual_limit,
+                "tsumitate_nisa_annual_limit": settings.tax_calculator.tsumitate_nisa_annual_limit,
+                "default_broker": settings.tax_calculator.default_broker,
+                "loss_carryforward_years": settings.tax_calculator.loss_carryforward_years,
+                "decimal_places": settings.tax_calculator.decimal_places
             },
             "default_watchlists": settings.default_watchlists
         }
