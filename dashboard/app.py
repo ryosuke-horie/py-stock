@@ -32,6 +32,7 @@ from dashboard.components.backtest import BacktestComponent
 from dashboard.components.market_environment import render_market_environment_tab
 from dashboard.components.news_sentiment import render_news_sentiment_analysis
 from dashboard.components.tax_calculation import render_tax_calculation_tab
+from dashboard.components.fundamental_analysis import render_fundamental_analysis_tab
 from src.data_collector.watchlist_storage import WatchlistStorage
 
 # ページ設定
@@ -162,8 +163,8 @@ class StockDashboard:
         self.setup_sidebar()
         
         # メインコンテンツ
-        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8 = st.tabs([
-            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト"
+        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8, main_tab9 = st.tabs([
+            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト", "📊 ファンダメンタルズ"
         ])
         
         with main_tab1:
@@ -189,6 +190,9 @@ class StockDashboard:
         
         with main_tab8:
             render_tax_calculation_tab()
+        
+        with main_tab9:
+            render_fundamental_analysis_tab()
         
         # 自動更新
         if st.session_state.auto_refresh:
