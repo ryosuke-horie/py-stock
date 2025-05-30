@@ -36,6 +36,10 @@ from dashboard.components.fundamental_analysis import render_fundamental_analysi
 from dashboard.components.investment_story import render_investment_story_tab
 from dashboard.components.portfolio_analysis import render_portfolio_analysis_tab
 from dashboard.components.performance_tracking import render_performance_tracking_tab
+from dashboard.components.education_glossary import render_education_glossary_tab
+from dashboard.components.education_simulation import render_education_simulation_tab
+from dashboard.components.education_cases import render_education_cases_tab
+from dashboard.components.education_tutorial import render_education_tutorial_tab
 from src.data_collector.watchlist_storage import WatchlistStorage
 
 # ページ設定
@@ -166,8 +170,8 @@ class StockDashboard:
         self.setup_sidebar()
         
         # メインコンテンツ
-        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8, main_tab9, main_tab10, main_tab11, main_tab12 = st.tabs([
-            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト", "📊 ファンダメンタルズ", "⚖️ ポートフォリオ", "📖 投資ストーリー", "📈 パフォーマンス追跡"
+        main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6, main_tab7, main_tab8, main_tab9, main_tab10, main_tab11, main_tab12, main_tab13 = st.tabs([
+            "🏠 概要", "🌍 市場環境", "📈 チャート分析", "🎯 シグナル", "🚨 アラート", "📊 バックテスト", "📰 ニュース分析", "💰 税務・コスト", "📊 ファンダメンタルズ", "⚖️ ポートフォリオ", "📖 投資ストーリー", "📈 パフォーマンス追跡", "🎓 教育・学習"
         ])
         
         with main_tab1:
@@ -205,6 +209,9 @@ class StockDashboard:
         
         with main_tab12:
             render_performance_tracking_tab()
+        
+        with main_tab13:
+            self.show_education()
         
         # 自動更新
         if st.session_state.auto_refresh:
@@ -479,6 +486,27 @@ class StockDashboard:
                 
         except Exception as e:
             st.error(f"シグナル取得エラー: {e}")
+    
+    def show_education(self):
+        """教育・学習ページ表示"""
+        st.header("🎓 教育・学習支援")
+        
+        # 教育機能のサブタブ
+        edu_tab1, edu_tab2, edu_tab3, edu_tab4 = st.tabs([
+            "📚 投資用語集", "🎮 練習モード", "📖 事例学習", "🎓 チュートリアル"
+        ])
+        
+        with edu_tab1:
+            render_education_glossary_tab()
+        
+        with edu_tab2:
+            render_education_simulation_tab()
+        
+        with edu_tab3:
+            render_education_cases_tab()
+        
+        with edu_tab4:
+            render_education_tutorial_tab()
 
 
 def main():
