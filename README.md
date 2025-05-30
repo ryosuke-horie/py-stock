@@ -34,13 +34,55 @@
 - **時間帯分析**: セッション別強度・拒否率評価
 - **出来高連動**: 出来高を考慮した信頼度スコアリング
 
-**Streamlitダッシュボード v1.0** 🆕
+**税務・NISA管理システム v1.0** 🆕  
+- **TaxCalculator**: 日本の投資税制完全対応（20.315%税率、FIFO管理）
+- **NisaManager**: 新NISA制度対応（成長投資枠240万円、つみたて枠120万円）
+- **FeeCalculator**: 主要証券会社手数料比較（SBI・楽天・松井証券）
+- **ProfitLossSimulator**: 損益通算・損失繰越3年間管理
+- **税務最適化**: 含み損益実現タイミング最適化提案
+- **節税効果計算**: NISA活用による具体的節税額算出
+
+**パフォーマンス追跡・学習システム v1.0** 🆕
+- **PerformanceTracker**: 包括的取引履歴分析（勝率・損益比・総合スコア）
+- **PatternAnalyzer**: AI駆動取引パターン認識・成功パターン検出
+- **TendencyAnalyzer**: 個人投資行動詳細分析（損切り・利確傾向）
+- **ImprovementEngine**: 個別化改善提案システム（優先度別アクション）
+- **感情分析**: リベンジトレード・パニック決済の検出
+- **パフォーマンスレベル**: 初心者〜エキスパート判定システム
+
+**高度ファンダメンタルズ分析 v1.0** 🆕
+- **FundamentalAnalyzer**: 企業財務深度分析（PER・ROE・財務健全性スコア）
+- **同業他社比較**: 業界内ポジション自動評価・順位付け
+- **成長トレンド分析**: 売上・利益のCAGR（年平均成長率）計算
+- **財務健全性判定**: 流動比率・自己資本比率による100点満点評価
+- **配当分析**: 配当利回り・配当性向・継続性評価
+
+**投資ストーリー・シナリオ生成 v1.0** 🆕
+- **InvestmentStoryGenerator**: AI投資レポート自動生成（初心者向け）
+- **3シナリオ分析**: 楽観・中立・悲観シナリオ投資分析
+- **投資用語解説**: 専門用語の自動解説・具体例提示
+- **IntegratedAnalyzer**: ファンダメンタルズ+テクニカル統合分析
+- **リスクマトリックス**: 体系的リスク要因整理
+- **目標株価算出**: シナリオ別発生確率と目標価格
+
+**MCP統合アーキテクチャ v1.0** 🆕
+- **Stock Data MCPサーバ**: リアルタイム株価データ配信・キャッシング
+- **News Analysis MCPサーバ**: 銘柄関連ニュース・センチメント分析
+- **レート制限管理**: API制限対応・インテリジェント制御
+- **銘柄コード正規化**: 日本株・米国株統一管理
+- **TypeScript実装**: 高性能MCP サーバアーキテクチャ
+
+**Streamlitダッシュボード v2.0** 🆕
 - **リアルタイム監視**: ウォッチリスト銘柄の価格・指標表示
 - **インタラクティブチャート**: ローソク足+テクニカル指標オーバーレイ
 - **シグナル履歴管理**: 売買シグナル発生履歴とパフォーマンス追跡
 - **アラートシステム**: 価格・シグナル・ボラティリティ・出来高アラート
 - **バックテスト機能**: 戦略検証と結果可視化
 - **仮想トレード**: リスクフリーでの戦略テスト
+- **ファンダメンタルズタブ**: 企業財務指標・同業他社比較可視化
+- **投資ストーリータブ**: ストーリー形式分析結果・3シナリオ表示
+- **税務・コストタブ**: 手数料比較・NISA枠利用状況・税務計算
+- **パフォーマンス追跡タブ**: 総合スコア・投資傾向・改善提案表示
 
 ## 🔧 インストールと使用方法
 
@@ -101,6 +143,30 @@ streamlit run dashboard/app.py
 - **戦略バックテスト**: 過去データでの戦略検証
 - **パフォーマンス可視化**: 損益グラフ、ドローダウン分析
 - **統計サマリー**: 詳細なパフォーマンス指標
+
+#### 6. Fundamental Analysis タブ 🆕
+- **企業財務指標**: PER・PBR・ROE・配当利回り表示
+- **財務健全性スコア**: 100点満点での企業評価
+- **成長トレンドチャート**: 売上・利益のCAGR可視化
+- **同業他社比較**: 業界内ポジション・順位表示
+
+#### 7. Investment Story タブ 🆕
+- **AIストーリー生成**: 自然言語での分析結果説明
+- **3シナリオ表示**: 楽観・中立・悲観シナリオ分析
+- **リスクマトリックス**: 体系的リスク要因可視化
+- **投資用語解説**: 専門用語の自動解説機能
+
+#### 8. Tax & Cost タブ 🆕
+- **手数料比較チャート**: 主要証券会社別手数料比較
+- **NISA枠利用状況**: 成長投資枠・つみたて投資枠の残高表示
+- **税務計算結果**: 譲渡益税・実現損益の自動計算
+- **損益通算シミュレーション**: 最適な売却タイミング提案
+
+#### 9. Performance Tracking タブ 🆕
+- **総合スコアゲージ**: 投資パフォーマンス100点満点表示
+- **投資傾向レーダーチャート**: 損切り・利確・リスク管理傾向
+- **取引パターン分析**: 時間帯別・保有期間別成功率
+- **改善提案表示**: 優先度別アクション項目と実装計画
 
 ### ダッシュボード使用の流れ
 
@@ -210,6 +276,93 @@ tail -f logs/app.log
 ```
 
 ## 📚 Python APIでの使用例
+
+#### 税務・NISA管理
+
+```python
+from src.tax_calculation.tax_calculator import TaxCalculator
+from src.tax_calculation.nisa_manager import NisaManager
+from src.tax_calculation.fee_calculator import FeeCalculator
+
+# 税務計算
+tax_calc = TaxCalculator()
+tax_calc.add_trade("7203", 100, 2500, "buy")   # 購入
+tax_calc.add_trade("7203", 50, 2700, "sell")   # 売却
+tax_result = tax_calc.calculate_taxes()
+print(f"譲渡益税: {tax_result.total_tax:,.0f}円")
+
+# NISA枠管理
+nisa = NisaManager()
+nisa.add_investment("成長投資枠", 500000, "2024-01-15")
+remaining = nisa.get_remaining_capacity()
+print(f"成長投資枠残り: {remaining['growth']:,.0f}円")
+
+# 手数料比較
+fee_calc = FeeCalculator()
+comparison = fee_calc.compare_fees(1000000)  # 100万円投資
+print(f"最安証券会社: {comparison['cheapest']['broker']}")
+```
+
+#### パフォーマンス追跡・学習
+
+```python
+from src.performance_tracking.performance_tracker import PerformanceTracker
+from src.performance_tracking.improvement_suggestions import ImprovementSuggestionEngine
+
+# パフォーマンス分析
+tracker = PerformanceTracker()
+tracker.add_trade("7203", 2500, 2700, "2024-01-15", "2024-01-20")
+performance = tracker.get_comprehensive_analysis()
+print(f"総合スコア: {performance.overall_score}/100")
+print(f"勝率: {performance.win_rate:.1%}")
+
+# 改善提案
+suggestion_engine = ImprovementSuggestionEngine(tracker)
+suggestions = suggestion_engine.generate_suggestions()
+for suggestion in suggestions.high_priority:
+    print(f"【高優先度】{suggestion.title}: {suggestion.description}")
+```
+
+#### 高度ファンダメンタルズ分析
+
+```python
+from src.technical_analysis.fundamental_analysis import FundamentalAnalyzer
+
+# ファンダメンタルズ分析
+analyzer = FundamentalAnalyzer("7203")
+analysis = analyzer.get_comprehensive_analysis()
+
+print(f"財務健全性スコア: {analysis.health_score}/100")
+print(f"PER: {analysis.valuation_metrics.per:.2f}")
+print(f"ROE: {analysis.profitability_metrics.roe:.1%}")
+
+# 同業他社比較
+comparison = analyzer.compare_with_peers(["7267", "7201"])
+print(f"業界順位: {comparison.industry_rank}/{len(comparison.peers)+1}")
+```
+
+#### 投資ストーリー・シナリオ生成
+
+```python
+from src.technical_analysis.investment_story_generator import InvestmentStoryGenerator
+from src.technical_analysis.integrated_analysis import IntegratedAnalyzer
+
+# 投資ストーリー生成
+story_gen = InvestmentStoryGenerator("7203")
+story = story_gen.generate_comprehensive_story()
+
+print("=== 投資ストーリー ===")
+print(story.summary)
+print("\n=== 3シナリオ分析 ===")
+for scenario in story.scenarios:
+    print(f"{scenario.name}: 目標株価 {scenario.target_price}円 (確率{scenario.probability}%)")
+
+# 統合分析
+integrated = IntegratedAnalyzer("7203")
+analysis = integrated.analyze()
+print(f"\n総合判断: {analysis.recommendation}")
+print(f"信頼度: {analysis.confidence_score}/100")
+```
 
 #### データ収集
 
