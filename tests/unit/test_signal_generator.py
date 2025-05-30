@@ -31,7 +31,7 @@ class TestSignalGenerator:
         """各テストメソッド実行前の初期化"""
         # サンプルデータ作成（200日分、より複雑なパターン）
         np.random.seed(42)
-        dates = pd.date_range(start='2024-01-01', periods=200, freq='H')
+        dates = pd.date_range(start='2024-01-01', periods=200, freq='h')
         
         # 現実的な価格データ生成
         base_price = 1000
