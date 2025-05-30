@@ -517,12 +517,21 @@ class TestIntegration:
         analyzer = portfolio_analyzer_with_risk_manager
         analyzer.set_price_history(sample_price_data)
         
-        # 確定的な結果のためのモック設定
-        mock_random.return_value = np.array([[0.01, 0.01, 0.01]] * 5)  # 5日間の固定リターン
+        # 確定的な結果のためのモック設定（正しい形状）
+        # 5日間 x 3銘柄の配列
+        mock_random.return_value = np.array([
+            [0.01, 0.01, 0.01],
+            [0.005, 0.005, 0.005],
+            [-0.005, -0.005, -0.005],
+            [0.02, 0.02, 0.02],
+            [0.0, 0.0, 0.0]
+        ])
         
         result = analyzer.monte_carlo_stress_test(10, 5)
         
-        assert result['simulations'] == 10
-        assert result['time_horizon'] == 5
-        assert result['portfolio_value'] > 0
+        # 結果が辞書でキーが存在することを確認
+        assert isinstance(result, dict)
+        assert result.get('simulations', 0) == 10
+        assert result.get('time_horizon', 0) == 5
+        assert result.get('portfolio_value', 0) > 0
         assert 'var_95' in result

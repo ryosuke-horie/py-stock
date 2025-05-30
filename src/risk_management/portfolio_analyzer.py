@@ -515,7 +515,10 @@ class PortfolioAnalyzer:
             # VaR計算
             var_95 = np.percentile(losses, 95)
             var_99 = np.percentile(losses, 99)
-            expected_loss = np.mean(losses[losses > 0])
+            
+            # 損失がある場合のみ平均を計算
+            positive_losses = losses[losses > 0]
+            expected_loss = np.mean(positive_losses) if len(positive_losses) > 0 else 0
             worst_case = np.max(losses)
             
             # 負の値のパーセンタイル
