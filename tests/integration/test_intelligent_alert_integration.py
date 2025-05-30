@@ -155,7 +155,7 @@ class TestIntelligentAlertIntegration:
             symbol=symbol,
             conditions=conditions,
             min_conditions=2,
-            priority_rules={2: 'medium', 3: 'high'}
+            priority_rules={2: AlertPriority.MEDIUM, 3: AlertPriority.HIGH}
         )
         
         # 3. 動的閾値調整

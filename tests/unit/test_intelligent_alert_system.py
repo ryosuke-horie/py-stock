@@ -130,9 +130,9 @@ class TestIntelligentAlertSystem:
             conditions=conditions,
             min_conditions=2,
             priority_rules={
-                1: 'low',
-                2: 'medium',
-                3: 'high'
+                1: AlertPriority.LOW,
+                2: AlertPriority.MEDIUM,
+                3: AlertPriority.HIGH
             }
         )
         
