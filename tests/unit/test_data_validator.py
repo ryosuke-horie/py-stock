@@ -163,7 +163,7 @@ class TestDataValidator:
         anomaly_data.loc[50, 'close'] = anomaly_data.loc[49, 'close'] * 1.5  # 50%上昇
         
         # 出来高スパイクを挿入
-        anomaly_data.loc[60, 'volume'] = anomaly_data['volume'].mean() * 10
+        anomaly_data.loc[60, 'volume'] = int(anomaly_data['volume'].mean() * 10)
         
         # OHLC不整合を挿入
         anomaly_data.loc[70, 'high'] = anomaly_data.loc[70, 'low'] - 10

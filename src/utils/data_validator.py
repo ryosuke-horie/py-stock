@@ -113,14 +113,15 @@ class DataValidator:
         
         try:
             # 価格変動の異常検出
-            df['price_change'] = df['close'].pct_change()
-            extreme_changes = df[abs(df['price_change']) > self.price_change_threshold]
+            df_temp = df.copy()  # 元のDataFrameを変更しないようにコピー
+            df_temp['price_change'] = df_temp['close'].pct_change()
+            extreme_changes = df_temp[abs(df_temp['price_change']) > self.price_change_threshold]
             
             for idx, row in extreme_changes.iterrows():
                 anomalies["price_anomalies"].append({
                     "timestamp": row['timestamp'],
-                    "change_rate": row['price_change'],
-                    "price": row['close']
+                    "change_rate": float(row['price_change']),  # numpy型を明示的にfloatに変換
+                    "price": float(row['close'])
                 })
             
             # 出来高の異常検出
@@ -327,9 +328,9 @@ class DataValidator:
                     if method == "linear":
                         interpolated_df[col] = interpolated_df[col].interpolate(method='linear')
                     elif method == "forward":
-                        interpolated_df[col] = interpolated_df[col].fillna(method='ffill')
+                        interpolated_df[col] = interpolated_df[col].ffill()
                     elif method == "backward":
-                        interpolated_df[col] = interpolated_df[col].fillna(method='bfill')
+                        interpolated_df[col] = interpolated_df[col].bfill()
                     
                     missing_after = interpolated_df[col].isna().sum()
                     if missing_before != missing_after:
