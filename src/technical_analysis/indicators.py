@@ -585,3 +585,55 @@ class TechnicalIndicators:
         }
         
         return signals
+    
+    def calculate_all_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+        """
+        全てのテクニカル指標を計算してDataFrameとして返す
+        
+        Args:
+            data: OHLCV形式のDataFrame（Date列をインデックスとして持つ）
+            
+        Returns:
+            指標を追加したDataFrame
+        """
+        # データのコピーを作成
+        result_df = data.copy()
+        
+        # 移動平均
+        ma = self.moving_averages()
+        for key, series in ma.items():
+            result_df[key.upper()] = series
+        
+        # RSI
+        result_df['RSI'] = self.rsi()
+        
+        # ストキャスティクス
+        stoch = self.stochastic()
+        result_df['STOCH_K'] = stoch['stoch_k']
+        result_df['STOCH_D'] = stoch['stoch_d']
+        
+        # MACD
+        macd_data = self.macd()
+        result_df['MACD'] = macd_data['macd']
+        result_df['MACD_SIGNAL'] = macd_data['macd_signal']
+        result_df['MACD_HISTOGRAM'] = macd_data['macd_histogram']
+        
+        # ボリンジャーバンド
+        bb = self.bollinger_bands()
+        result_df['BB_UPPER'] = bb['bb_upper']
+        result_df['BB_MIDDLE'] = bb['bb_middle']
+        result_df['BB_LOWER'] = bb['bb_lower']
+        result_df['BB_PERCENT_B'] = bb['bb_percent_b']
+        result_df['BB_BANDWIDTH'] = bb['bb_bandwidth']
+        
+        # VWAP
+        result_df['VWAP'] = self.vwap()
+        
+        # ATR
+        result_df['ATR'] = self.atr()
+        
+        # Volume列が元のデータに含まれていることを確認
+        if 'Volume' not in result_df.columns and 'volume' in self.data.columns:
+            result_df['Volume'] = self.data['volume']
+        
+        return result_df
