@@ -31,7 +31,7 @@ class TestSignalGenerator:
         """各テストメソッド実行前の初期化"""
         # サンプルデータ作成（200日分、より複雑なパターン）
         np.random.seed(42)
-        dates = pd.date_range(start='2024-01-01', periods=200, freq='H')
+        dates = pd.date_range(start='2024-01-01', periods=200, freq='h')
         
         # 現実的な価格データ生成
         base_price = 1000
@@ -473,7 +473,7 @@ class TestSignalGenerator:
         """エッジケーステスト"""
         # 最小データでの処理
         minimal_data = pd.DataFrame({
-            'timestamp': pd.date_range(start='2024-01-01', periods=60, freq='H'),
+            'timestamp': pd.date_range(start='2024-01-01', periods=60, freq='h'),
             'open': np.random.uniform(990, 1010, 60),
             'high': np.random.uniform(995, 1015, 60),
             'low': np.random.uniform(985, 1005, 60),
