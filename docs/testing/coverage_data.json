@@ -1,0 +1,2224 @@
+{
+  "coverage_data": {
+    "overall_coverage": 70.8,
+    "branch_coverage": 61.980000000000004,
+    "packages": {
+      ".": {
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "files": [
+          {
+            "filename": "__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          }
+        ]
+      },
+      "config": {
+        "line_coverage": 76.92,
+        "branch_coverage": 61.11,
+        "files": [
+          {
+            "filename": "config/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "config/settings.py",
+            "line_coverage": 76.92,
+            "branch_coverage": 61.11,
+            "lines_total": 182,
+            "lines_covered": 140,
+            "lines_missing": 42,
+            "missing_lines": [
+              123,
+              124,
+              125,
+              126,
+              127,
+              128,
+              265,
+              269,
+              273,
+              277
+            ]
+          }
+        ]
+      },
+      "data_collector": {
+        "line_coverage": 83.03,
+        "branch_coverage": 84.15,
+        "files": [
+          {
+            "filename": "data_collector/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "data_collector/backup_manager.py",
+            "line_coverage": 78.60000000000001,
+            "branch_coverage": 75.0,
+            "lines_total": 229,
+            "lines_covered": 180,
+            "lines_missing": 49,
+            "missing_lines": [
+              113,
+              115,
+              116,
+              117,
+              146,
+              147,
+              149,
+              150,
+              151,
+              152
+            ]
+          },
+          {
+            "filename": "data_collector/stock_data_collector.py",
+            "line_coverage": 89.71000000000001,
+            "branch_coverage": 91.67,
+            "lines_total": 136,
+            "lines_covered": 122,
+            "lines_missing": 14,
+            "missing_lines": [
+              166,
+              167,
+              170,
+              171,
+              187,
+              188,
+              189,
+              271,
+              272,
+              302
+            ]
+          },
+          {
+            "filename": "data_collector/symbol_manager.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 98.21,
+            "lines_total": 125,
+            "lines_covered": 125,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "data_collector/watchlist_storage.py",
+            "line_coverage": 73.72999999999999,
+            "branch_coverage": 67.86,
+            "lines_total": 217,
+            "lines_covered": 160,
+            "lines_missing": 57,
+            "missing_lines": [
+              133,
+              134,
+              159,
+              160,
+              161,
+              213,
+              214,
+              215,
+              240,
+              241
+            ]
+          }
+        ]
+      },
+      "examples": {
+        "line_coverage": 6.227,
+        "branch_coverage": 0.0,
+        "files": [
+          {
+            "filename": "examples/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "examples/basic_usage.py",
+            "line_coverage": 11.57,
+            "branch_coverage": 0.0,
+            "lines_total": 121,
+            "lines_covered": 14,
+            "lines_missing": 107,
+            "missing_lines": [
+              21,
+              22,
+              23,
+              26,
+              29,
+              35,
+              38,
+              41,
+              42,
+              43
+            ]
+          },
+          {
+            "filename": "examples/intelligent_alert_demo.py",
+            "line_coverage": 0.0,
+            "branch_coverage": 0.0,
+            "lines_total": 108,
+            "lines_covered": 0,
+            "lines_missing": 108,
+            "missing_lines": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              13,
+              14,
+              16,
+              21,
+              22
+            ]
+          },
+          {
+            "filename": "examples/risk_management_demo.py",
+            "line_coverage": 8.718,
+            "branch_coverage": 0.0,
+            "lines_total": 195,
+            "lines_covered": 17,
+            "lines_missing": 178,
+            "missing_lines": [
+              26,
+              27,
+              30,
+              41,
+              43,
+              47,
+              48,
+              49,
+              51,
+              53
+            ]
+          },
+          {
+            "filename": "examples/signal_generator_demo.py",
+            "line_coverage": 5.2780000000000005,
+            "branch_coverage": 0.0,
+            "lines_total": 360,
+            "lines_covered": 19,
+            "lines_missing": 341,
+            "missing_lines": [
+              30,
+              31,
+              32,
+              35,
+              38,
+              39,
+              42,
+              43,
+              45,
+              47
+            ]
+          },
+          {
+            "filename": "examples/support_resistance_demo.py",
+            "line_coverage": 6.32,
+            "branch_coverage": 0.0,
+            "lines_total": 269,
+            "lines_covered": 17,
+            "lines_missing": 252,
+            "missing_lines": [
+              24,
+              25,
+              26,
+              29,
+              32,
+              33,
+              36,
+              37,
+              39,
+              41
+            ]
+          },
+          {
+            "filename": "examples/technical_analysis_demo.py",
+            "line_coverage": 5.743,
+            "branch_coverage": 0.0,
+            "lines_total": 296,
+            "lines_covered": 17,
+            "lines_missing": 279,
+            "missing_lines": [
+              24,
+              25,
+              26,
+              29,
+              32,
+              33,
+              36,
+              37,
+              39,
+              41
+            ]
+          }
+        ]
+      },
+      "models": {
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "files": [
+          {
+            "filename": "models/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          }
+        ]
+      },
+      "performance_tracking": {
+        "line_coverage": 78.89,
+        "branch_coverage": 62.0,
+        "files": [
+          {
+            "filename": "performance_tracking/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 6,
+            "lines_covered": 6,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "performance_tracking/improvement_suggestions.py",
+            "line_coverage": 77.39,
+            "branch_coverage": 51.67,
+            "lines_total": 230,
+            "lines_covered": 178,
+            "lines_missing": 52,
+            "missing_lines": [
+              211,
+              237,
+              328,
+              329,
+              330,
+              364,
+              390,
+              416,
+              442,
+              449
+            ]
+          },
+          {
+            "filename": "performance_tracking/pattern_analyzer.py",
+            "line_coverage": 89.47,
+            "branch_coverage": 81.25,
+            "lines_total": 266,
+            "lines_covered": 238,
+            "lines_missing": 28,
+            "missing_lines": [
+              155,
+              156,
+              157,
+              173,
+              199,
+              245,
+              273,
+              322,
+              335,
+              358
+            ]
+          },
+          {
+            "filename": "performance_tracking/performance_tracker.py",
+            "line_coverage": 70.61,
+            "branch_coverage": 54.290000000000006,
+            "lines_total": 228,
+            "lines_covered": 161,
+            "lines_missing": 67,
+            "missing_lines": [
+              124,
+              125,
+              128,
+              129,
+              132,
+              133,
+              161,
+              162,
+              164,
+              165
+            ]
+          },
+          {
+            "filename": "performance_tracking/tendency_analyzer.py",
+            "line_coverage": 72.39,
+            "branch_coverage": 55.400000000000006,
+            "lines_total": 536,
+            "lines_covered": 388,
+            "lines_missing": 148,
+            "missing_lines": [
+              200,
+              203,
+              220,
+              221,
+              223,
+              224,
+              229,
+              230,
+              235,
+              237
+            ]
+          },
+          {
+            "filename": "performance_tracking/trade_history_manager.py",
+            "line_coverage": 90.68,
+            "branch_coverage": 86.96000000000001,
+            "lines_total": 236,
+            "lines_covered": 214,
+            "lines_missing": 22,
+            "missing_lines": [
+              128,
+              243,
+              244,
+              245,
+              280,
+              281,
+              282,
+              330,
+              331,
+              332
+            ]
+          }
+        ]
+      },
+      "risk_management": {
+        "line_coverage": 83.05,
+        "branch_coverage": 75.64,
+        "files": [
+          {
+            "filename": "risk_management/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 3,
+            "lines_covered": 3,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "risk_management/portfolio_analyzer.py",
+            "line_coverage": 85.95,
+            "branch_coverage": 75.64,
+            "lines_total": 299,
+            "lines_covered": 257,
+            "lines_missing": 42,
+            "missing_lines": [
+              128,
+              129,
+              135,
+              136,
+              138,
+              139,
+              197,
+              206,
+              229,
+              245
+            ]
+          },
+          {
+            "filename": "risk_management/risk_manager.py",
+            "line_coverage": 79.03999999999999,
+            "branch_coverage": 75.64,
+            "lines_total": 229,
+            "lines_covered": 181,
+            "lines_missing": 48,
+            "missing_lines": [
+              70,
+              136,
+              137,
+              138,
+              179,
+              180,
+              189,
+              190,
+              191,
+              210
+            ]
+          }
+        ]
+      },
+      "tax_calculation": {
+        "line_coverage": 92.82000000000001,
+        "branch_coverage": 69.89999999999999,
+        "files": [
+          {
+            "filename": "tax_calculation/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 5,
+            "lines_covered": 5,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "tax_calculation/fee_calculator.py",
+            "line_coverage": 91.18,
+            "branch_coverage": 72.22,
+            "lines_total": 102,
+            "lines_covered": 93,
+            "lines_missing": 9,
+            "missing_lines": [
+              131,
+              132,
+              137,
+              144,
+              153,
+              162,
+              191,
+              226,
+              231
+            ]
+          },
+          {
+            "filename": "tax_calculation/nisa_manager.py",
+            "line_coverage": 94.67,
+            "branch_coverage": 68.17999999999999,
+            "lines_total": 150,
+            "lines_covered": 142,
+            "lines_missing": 8,
+            "missing_lines": [
+              115,
+              116,
+              126,
+              131,
+              238,
+              288,
+              360,
+              366
+            ]
+          },
+          {
+            "filename": "tax_calculation/profit_loss_simulator.py",
+            "line_coverage": 90.53,
+            "branch_coverage": 65.71000000000001,
+            "lines_total": 190,
+            "lines_covered": 172,
+            "lines_missing": 18,
+            "missing_lines": [
+              114,
+              152,
+              155,
+              161,
+              176,
+              199,
+              202,
+              276,
+              277,
+              279
+            ]
+          },
+          {
+            "filename": "tax_calculation/tax_calculator.py",
+            "line_coverage": 94.93,
+            "branch_coverage": 76.09,
+            "lines_total": 138,
+            "lines_covered": 131,
+            "lines_missing": 7,
+            "missing_lines": [
+              75,
+              95,
+              152,
+              163,
+              201,
+              206,
+              213
+            ]
+          }
+        ]
+      },
+      "technical_analysis": {
+        "line_coverage": 89.13,
+        "branch_coverage": 71.46000000000001,
+        "files": [
+          {
+            "filename": "technical_analysis/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "technical_analysis/fundamental_analysis.py",
+            "line_coverage": 83.44,
+            "branch_coverage": 64.92999999999999,
+            "lines_total": 308,
+            "lines_covered": 257,
+            "lines_missing": 51,
+            "missing_lines": [
+              114,
+              115,
+              116,
+              125,
+              126,
+              127,
+              142,
+              143,
+              144,
+              151
+            ]
+          },
+          {
+            "filename": "technical_analysis/fundamental_visualization.py",
+            "line_coverage": 89.38000000000001,
+            "branch_coverage": 79.03,
+            "lines_total": 160,
+            "lines_covered": 143,
+            "lines_missing": 17,
+            "missing_lines": [
+              247,
+              248,
+              249,
+              250,
+              251,
+              252,
+              253,
+              254,
+              256,
+              258
+            ]
+          },
+          {
+            "filename": "technical_analysis/indicators.py",
+            "line_coverage": 97.11,
+            "branch_coverage": 87.5,
+            "lines_total": 242,
+            "lines_covered": 235,
+            "lines_missing": 7,
+            "missing_lines": [
+              115,
+              182,
+              409,
+              410,
+              411,
+              481,
+              483
+            ]
+          },
+          {
+            "filename": "technical_analysis/integrated_analysis.py",
+            "line_coverage": 92.44,
+            "branch_coverage": 73.61,
+            "lines_total": 172,
+            "lines_covered": 159,
+            "lines_missing": 13,
+            "missing_lines": [
+              141,
+              152,
+              154,
+              179,
+              180,
+              181,
+              242,
+              250,
+              276,
+              277
+            ]
+          },
+          {
+            "filename": "technical_analysis/intelligent_alert_system.py",
+            "line_coverage": 91.0,
+            "branch_coverage": 66.67,
+            "lines_total": 200,
+            "lines_covered": 182,
+            "lines_missing": 18,
+            "missing_lines": [
+              108,
+              137,
+              139,
+              141,
+              143,
+              287,
+              291,
+              304,
+              308,
+              318
+            ]
+          },
+          {
+            "filename": "technical_analysis/investment_story_generator.py",
+            "line_coverage": 86.25,
+            "branch_coverage": 64.63,
+            "lines_total": 240,
+            "lines_covered": 207,
+            "lines_missing": 33,
+            "missing_lines": [
+              264,
+              265,
+              267,
+              291,
+              300,
+              310,
+              311,
+              312,
+              314,
+              315
+            ]
+          },
+          {
+            "filename": "technical_analysis/market_environment.py",
+            "line_coverage": 88.21,
+            "branch_coverage": 69.67,
+            "lines_total": 229,
+            "lines_covered": 202,
+            "lines_missing": 27,
+            "missing_lines": [
+              152,
+              154,
+              155,
+              156,
+              157,
+              158,
+              159,
+              160,
+              162,
+              170
+            ]
+          },
+          {
+            "filename": "technical_analysis/signal_generator.py",
+            "line_coverage": 89.75999999999999,
+            "branch_coverage": 76.22,
+            "lines_total": 420,
+            "lines_covered": 377,
+            "lines_missing": 43,
+            "missing_lines": [
+              107,
+              122,
+              423,
+              437,
+              443,
+              444,
+              445,
+              446,
+              447,
+              448
+            ]
+          },
+          {
+            "filename": "technical_analysis/support_resistance.py",
+            "line_coverage": 87.53999999999999,
+            "branch_coverage": 71.09,
+            "lines_total": 329,
+            "lines_covered": 288,
+            "lines_missing": 41,
+            "missing_lines": [
+              93,
+              160,
+              353,
+              363,
+              364,
+              365,
+              381,
+              382,
+              383,
+              384
+            ]
+          }
+        ]
+      },
+      "utils": {
+        "line_coverage": 94.74000000000001,
+        "branch_coverage": 93.33,
+        "files": [
+          {
+            "filename": "utils/__init__.py",
+            "line_coverage": 100.0,
+            "branch_coverage": 100.0,
+            "lines_total": 0,
+            "lines_covered": 0,
+            "lines_missing": 0,
+            "missing_lines": []
+          },
+          {
+            "filename": "utils/data_validator.py",
+            "line_coverage": 94.74000000000001,
+            "branch_coverage": 93.33,
+            "lines_total": 152,
+            "lines_covered": 144,
+            "lines_missing": 8,
+            "missing_lines": [
+              196,
+              237,
+              238,
+              288,
+              296,
+              347,
+              348,
+              349
+            ]
+          }
+        ]
+      }
+    },
+    "files": {
+      "__init__.py": {
+        "filename": "__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "config/__init__.py": {
+        "filename": "config/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "config/settings.py": {
+        "filename": "config/settings.py",
+        "line_coverage": 76.92,
+        "branch_coverage": 61.11,
+        "lines_total": 182,
+        "lines_covered": 140,
+        "lines_missing": 42,
+        "missing_lines": [
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          265,
+          269,
+          273,
+          277
+        ]
+      },
+      "data_collector/__init__.py": {
+        "filename": "data_collector/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "data_collector/backup_manager.py": {
+        "filename": "data_collector/backup_manager.py",
+        "line_coverage": 78.60000000000001,
+        "branch_coverage": 75.0,
+        "lines_total": 229,
+        "lines_covered": 180,
+        "lines_missing": 49,
+        "missing_lines": [
+          113,
+          115,
+          116,
+          117,
+          146,
+          147,
+          149,
+          150,
+          151,
+          152
+        ]
+      },
+      "data_collector/stock_data_collector.py": {
+        "filename": "data_collector/stock_data_collector.py",
+        "line_coverage": 89.71000000000001,
+        "branch_coverage": 91.67,
+        "lines_total": 136,
+        "lines_covered": 122,
+        "lines_missing": 14,
+        "missing_lines": [
+          166,
+          167,
+          170,
+          171,
+          187,
+          188,
+          189,
+          271,
+          272,
+          302
+        ]
+      },
+      "data_collector/symbol_manager.py": {
+        "filename": "data_collector/symbol_manager.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 98.21,
+        "lines_total": 125,
+        "lines_covered": 125,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "data_collector/watchlist_storage.py": {
+        "filename": "data_collector/watchlist_storage.py",
+        "line_coverage": 73.72999999999999,
+        "branch_coverage": 67.86,
+        "lines_total": 217,
+        "lines_covered": 160,
+        "lines_missing": 57,
+        "missing_lines": [
+          133,
+          134,
+          159,
+          160,
+          161,
+          213,
+          214,
+          215,
+          240,
+          241
+        ]
+      },
+      "examples/__init__.py": {
+        "filename": "examples/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "examples/basic_usage.py": {
+        "filename": "examples/basic_usage.py",
+        "line_coverage": 11.57,
+        "branch_coverage": 0.0,
+        "lines_total": 121,
+        "lines_covered": 14,
+        "lines_missing": 107,
+        "missing_lines": [
+          21,
+          22,
+          23,
+          26,
+          29,
+          35,
+          38,
+          41,
+          42,
+          43
+        ]
+      },
+      "examples/intelligent_alert_demo.py": {
+        "filename": "examples/intelligent_alert_demo.py",
+        "line_coverage": 0.0,
+        "branch_coverage": 0.0,
+        "lines_total": 108,
+        "lines_covered": 0,
+        "lines_missing": 108,
+        "missing_lines": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          13,
+          14,
+          16,
+          21,
+          22
+        ]
+      },
+      "examples/risk_management_demo.py": {
+        "filename": "examples/risk_management_demo.py",
+        "line_coverage": 8.718,
+        "branch_coverage": 0.0,
+        "lines_total": 195,
+        "lines_covered": 17,
+        "lines_missing": 178,
+        "missing_lines": [
+          26,
+          27,
+          30,
+          41,
+          43,
+          47,
+          48,
+          49,
+          51,
+          53
+        ]
+      },
+      "examples/signal_generator_demo.py": {
+        "filename": "examples/signal_generator_demo.py",
+        "line_coverage": 5.2780000000000005,
+        "branch_coverage": 0.0,
+        "lines_total": 360,
+        "lines_covered": 19,
+        "lines_missing": 341,
+        "missing_lines": [
+          30,
+          31,
+          32,
+          35,
+          38,
+          39,
+          42,
+          43,
+          45,
+          47
+        ]
+      },
+      "examples/support_resistance_demo.py": {
+        "filename": "examples/support_resistance_demo.py",
+        "line_coverage": 6.32,
+        "branch_coverage": 0.0,
+        "lines_total": 269,
+        "lines_covered": 17,
+        "lines_missing": 252,
+        "missing_lines": [
+          24,
+          25,
+          26,
+          29,
+          32,
+          33,
+          36,
+          37,
+          39,
+          41
+        ]
+      },
+      "examples/technical_analysis_demo.py": {
+        "filename": "examples/technical_analysis_demo.py",
+        "line_coverage": 5.743,
+        "branch_coverage": 0.0,
+        "lines_total": 296,
+        "lines_covered": 17,
+        "lines_missing": 279,
+        "missing_lines": [
+          24,
+          25,
+          26,
+          29,
+          32,
+          33,
+          36,
+          37,
+          39,
+          41
+        ]
+      },
+      "models/__init__.py": {
+        "filename": "models/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "performance_tracking/__init__.py": {
+        "filename": "performance_tracking/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 6,
+        "lines_covered": 6,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "performance_tracking/improvement_suggestions.py": {
+        "filename": "performance_tracking/improvement_suggestions.py",
+        "line_coverage": 77.39,
+        "branch_coverage": 51.67,
+        "lines_total": 230,
+        "lines_covered": 178,
+        "lines_missing": 52,
+        "missing_lines": [
+          211,
+          237,
+          328,
+          329,
+          330,
+          364,
+          390,
+          416,
+          442,
+          449
+        ]
+      },
+      "performance_tracking/pattern_analyzer.py": {
+        "filename": "performance_tracking/pattern_analyzer.py",
+        "line_coverage": 89.47,
+        "branch_coverage": 81.25,
+        "lines_total": 266,
+        "lines_covered": 238,
+        "lines_missing": 28,
+        "missing_lines": [
+          155,
+          156,
+          157,
+          173,
+          199,
+          245,
+          273,
+          322,
+          335,
+          358
+        ]
+      },
+      "performance_tracking/performance_tracker.py": {
+        "filename": "performance_tracking/performance_tracker.py",
+        "line_coverage": 70.61,
+        "branch_coverage": 54.290000000000006,
+        "lines_total": 228,
+        "lines_covered": 161,
+        "lines_missing": 67,
+        "missing_lines": [
+          124,
+          125,
+          128,
+          129,
+          132,
+          133,
+          161,
+          162,
+          164,
+          165
+        ]
+      },
+      "performance_tracking/tendency_analyzer.py": {
+        "filename": "performance_tracking/tendency_analyzer.py",
+        "line_coverage": 72.39,
+        "branch_coverage": 55.400000000000006,
+        "lines_total": 536,
+        "lines_covered": 388,
+        "lines_missing": 148,
+        "missing_lines": [
+          200,
+          203,
+          220,
+          221,
+          223,
+          224,
+          229,
+          230,
+          235,
+          237
+        ]
+      },
+      "performance_tracking/trade_history_manager.py": {
+        "filename": "performance_tracking/trade_history_manager.py",
+        "line_coverage": 90.68,
+        "branch_coverage": 86.96000000000001,
+        "lines_total": 236,
+        "lines_covered": 214,
+        "lines_missing": 22,
+        "missing_lines": [
+          128,
+          243,
+          244,
+          245,
+          280,
+          281,
+          282,
+          330,
+          331,
+          332
+        ]
+      },
+      "risk_management/__init__.py": {
+        "filename": "risk_management/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 3,
+        "lines_covered": 3,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "risk_management/portfolio_analyzer.py": {
+        "filename": "risk_management/portfolio_analyzer.py",
+        "line_coverage": 85.95,
+        "branch_coverage": 75.64,
+        "lines_total": 299,
+        "lines_covered": 257,
+        "lines_missing": 42,
+        "missing_lines": [
+          128,
+          129,
+          135,
+          136,
+          138,
+          139,
+          197,
+          206,
+          229,
+          245
+        ]
+      },
+      "risk_management/risk_manager.py": {
+        "filename": "risk_management/risk_manager.py",
+        "line_coverage": 79.03999999999999,
+        "branch_coverage": 75.64,
+        "lines_total": 229,
+        "lines_covered": 181,
+        "lines_missing": 48,
+        "missing_lines": [
+          70,
+          136,
+          137,
+          138,
+          179,
+          180,
+          189,
+          190,
+          191,
+          210
+        ]
+      },
+      "tax_calculation/__init__.py": {
+        "filename": "tax_calculation/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 5,
+        "lines_covered": 5,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "tax_calculation/fee_calculator.py": {
+        "filename": "tax_calculation/fee_calculator.py",
+        "line_coverage": 91.18,
+        "branch_coverage": 72.22,
+        "lines_total": 102,
+        "lines_covered": 93,
+        "lines_missing": 9,
+        "missing_lines": [
+          131,
+          132,
+          137,
+          144,
+          153,
+          162,
+          191,
+          226,
+          231
+        ]
+      },
+      "tax_calculation/nisa_manager.py": {
+        "filename": "tax_calculation/nisa_manager.py",
+        "line_coverage": 94.67,
+        "branch_coverage": 68.17999999999999,
+        "lines_total": 150,
+        "lines_covered": 142,
+        "lines_missing": 8,
+        "missing_lines": [
+          115,
+          116,
+          126,
+          131,
+          238,
+          288,
+          360,
+          366
+        ]
+      },
+      "tax_calculation/profit_loss_simulator.py": {
+        "filename": "tax_calculation/profit_loss_simulator.py",
+        "line_coverage": 90.53,
+        "branch_coverage": 65.71000000000001,
+        "lines_total": 190,
+        "lines_covered": 172,
+        "lines_missing": 18,
+        "missing_lines": [
+          114,
+          152,
+          155,
+          161,
+          176,
+          199,
+          202,
+          276,
+          277,
+          279
+        ]
+      },
+      "tax_calculation/tax_calculator.py": {
+        "filename": "tax_calculation/tax_calculator.py",
+        "line_coverage": 94.93,
+        "branch_coverage": 76.09,
+        "lines_total": 138,
+        "lines_covered": 131,
+        "lines_missing": 7,
+        "missing_lines": [
+          75,
+          95,
+          152,
+          163,
+          201,
+          206,
+          213
+        ]
+      },
+      "technical_analysis/__init__.py": {
+        "filename": "technical_analysis/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "technical_analysis/fundamental_analysis.py": {
+        "filename": "technical_analysis/fundamental_analysis.py",
+        "line_coverage": 83.44,
+        "branch_coverage": 64.92999999999999,
+        "lines_total": 308,
+        "lines_covered": 257,
+        "lines_missing": 51,
+        "missing_lines": [
+          114,
+          115,
+          116,
+          125,
+          126,
+          127,
+          142,
+          143,
+          144,
+          151
+        ]
+      },
+      "technical_analysis/fundamental_visualization.py": {
+        "filename": "technical_analysis/fundamental_visualization.py",
+        "line_coverage": 89.38000000000001,
+        "branch_coverage": 79.03,
+        "lines_total": 160,
+        "lines_covered": 143,
+        "lines_missing": 17,
+        "missing_lines": [
+          247,
+          248,
+          249,
+          250,
+          251,
+          252,
+          253,
+          254,
+          256,
+          258
+        ]
+      },
+      "technical_analysis/indicators.py": {
+        "filename": "technical_analysis/indicators.py",
+        "line_coverage": 97.11,
+        "branch_coverage": 87.5,
+        "lines_total": 242,
+        "lines_covered": 235,
+        "lines_missing": 7,
+        "missing_lines": [
+          115,
+          182,
+          409,
+          410,
+          411,
+          481,
+          483
+        ]
+      },
+      "technical_analysis/integrated_analysis.py": {
+        "filename": "technical_analysis/integrated_analysis.py",
+        "line_coverage": 92.44,
+        "branch_coverage": 73.61,
+        "lines_total": 172,
+        "lines_covered": 159,
+        "lines_missing": 13,
+        "missing_lines": [
+          141,
+          152,
+          154,
+          179,
+          180,
+          181,
+          242,
+          250,
+          276,
+          277
+        ]
+      },
+      "technical_analysis/intelligent_alert_system.py": {
+        "filename": "technical_analysis/intelligent_alert_system.py",
+        "line_coverage": 91.0,
+        "branch_coverage": 66.67,
+        "lines_total": 200,
+        "lines_covered": 182,
+        "lines_missing": 18,
+        "missing_lines": [
+          108,
+          137,
+          139,
+          141,
+          143,
+          287,
+          291,
+          304,
+          308,
+          318
+        ]
+      },
+      "technical_analysis/investment_story_generator.py": {
+        "filename": "technical_analysis/investment_story_generator.py",
+        "line_coverage": 86.25,
+        "branch_coverage": 64.63,
+        "lines_total": 240,
+        "lines_covered": 207,
+        "lines_missing": 33,
+        "missing_lines": [
+          264,
+          265,
+          267,
+          291,
+          300,
+          310,
+          311,
+          312,
+          314,
+          315
+        ]
+      },
+      "technical_analysis/market_environment.py": {
+        "filename": "technical_analysis/market_environment.py",
+        "line_coverage": 88.21,
+        "branch_coverage": 69.67,
+        "lines_total": 229,
+        "lines_covered": 202,
+        "lines_missing": 27,
+        "missing_lines": [
+          152,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          160,
+          162,
+          170
+        ]
+      },
+      "technical_analysis/signal_generator.py": {
+        "filename": "technical_analysis/signal_generator.py",
+        "line_coverage": 89.75999999999999,
+        "branch_coverage": 76.22,
+        "lines_total": 420,
+        "lines_covered": 377,
+        "lines_missing": 43,
+        "missing_lines": [
+          107,
+          122,
+          423,
+          437,
+          443,
+          444,
+          445,
+          446,
+          447,
+          448
+        ]
+      },
+      "technical_analysis/support_resistance.py": {
+        "filename": "technical_analysis/support_resistance.py",
+        "line_coverage": 87.53999999999999,
+        "branch_coverage": 71.09,
+        "lines_total": 329,
+        "lines_covered": 288,
+        "lines_missing": 41,
+        "missing_lines": [
+          93,
+          160,
+          353,
+          363,
+          364,
+          365,
+          381,
+          382,
+          383,
+          384
+        ]
+      },
+      "utils/__init__.py": {
+        "filename": "utils/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      "utils/data_validator.py": {
+        "filename": "utils/data_validator.py",
+        "line_coverage": 94.74000000000001,
+        "branch_coverage": 93.33,
+        "lines_total": 152,
+        "lines_covered": 144,
+        "lines_missing": 8,
+        "missing_lines": [
+          196,
+          237,
+          238,
+          288,
+          296,
+          347,
+          348,
+          349
+        ]
+      }
+    }
+  },
+  "categories": {
+    "easy": [
+      {
+        "filename": "technical_analysis/fundamental_analysis.py",
+        "line_coverage": 83.44,
+        "branch_coverage": 64.92999999999999,
+        "lines_total": 308,
+        "lines_covered": 257,
+        "lines_missing": 51,
+        "missing_lines": [
+          114,
+          115,
+          116,
+          125,
+          126,
+          127,
+          142,
+          143,
+          144,
+          151
+        ]
+      },
+      {
+        "filename": "risk_management/portfolio_analyzer.py",
+        "line_coverage": 85.95,
+        "branch_coverage": 75.64,
+        "lines_total": 299,
+        "lines_covered": 257,
+        "lines_missing": 42,
+        "missing_lines": [
+          128,
+          129,
+          135,
+          136,
+          138,
+          139,
+          197,
+          206,
+          229,
+          245
+        ]
+      },
+      {
+        "filename": "technical_analysis/investment_story_generator.py",
+        "line_coverage": 86.25,
+        "branch_coverage": 64.63,
+        "lines_total": 240,
+        "lines_covered": 207,
+        "lines_missing": 33,
+        "missing_lines": [
+          264,
+          265,
+          267,
+          291,
+          300,
+          310,
+          311,
+          312,
+          314,
+          315
+        ]
+      },
+      {
+        "filename": "technical_analysis/support_resistance.py",
+        "line_coverage": 87.53999999999999,
+        "branch_coverage": 71.09,
+        "lines_total": 329,
+        "lines_covered": 288,
+        "lines_missing": 41,
+        "missing_lines": [
+          93,
+          160,
+          353,
+          363,
+          364,
+          365,
+          381,
+          382,
+          383,
+          384
+        ]
+      },
+      {
+        "filename": "technical_analysis/market_environment.py",
+        "line_coverage": 88.21,
+        "branch_coverage": 69.67,
+        "lines_total": 229,
+        "lines_covered": 202,
+        "lines_missing": 27,
+        "missing_lines": [
+          152,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159,
+          160,
+          162,
+          170
+        ]
+      },
+      {
+        "filename": "technical_analysis/fundamental_visualization.py",
+        "line_coverage": 89.38000000000001,
+        "branch_coverage": 79.03,
+        "lines_total": 160,
+        "lines_covered": 143,
+        "lines_missing": 17,
+        "missing_lines": [
+          247,
+          248,
+          249,
+          250,
+          251,
+          252,
+          253,
+          254,
+          256,
+          258
+        ]
+      },
+      {
+        "filename": "performance_tracking/pattern_analyzer.py",
+        "line_coverage": 89.47,
+        "branch_coverage": 81.25,
+        "lines_total": 266,
+        "lines_covered": 238,
+        "lines_missing": 28,
+        "missing_lines": [
+          155,
+          156,
+          157,
+          173,
+          199,
+          245,
+          273,
+          322,
+          335,
+          358
+        ]
+      },
+      {
+        "filename": "data_collector/stock_data_collector.py",
+        "line_coverage": 89.71000000000001,
+        "branch_coverage": 91.67,
+        "lines_total": 136,
+        "lines_covered": 122,
+        "lines_missing": 14,
+        "missing_lines": [
+          166,
+          167,
+          170,
+          171,
+          187,
+          188,
+          189,
+          271,
+          272,
+          302
+        ]
+      },
+      {
+        "filename": "technical_analysis/signal_generator.py",
+        "line_coverage": 89.75999999999999,
+        "branch_coverage": 76.22,
+        "lines_total": 420,
+        "lines_covered": 377,
+        "lines_missing": 43,
+        "missing_lines": [
+          107,
+          122,
+          423,
+          437,
+          443,
+          444,
+          445,
+          446,
+          447,
+          448
+        ]
+      },
+      {
+        "filename": "tax_calculation/profit_loss_simulator.py",
+        "line_coverage": 90.53,
+        "branch_coverage": 65.71000000000001,
+        "lines_total": 190,
+        "lines_covered": 172,
+        "lines_missing": 18,
+        "missing_lines": [
+          114,
+          152,
+          155,
+          161,
+          176,
+          199,
+          202,
+          276,
+          277,
+          279
+        ]
+      },
+      {
+        "filename": "performance_tracking/trade_history_manager.py",
+        "line_coverage": 90.68,
+        "branch_coverage": 86.96000000000001,
+        "lines_total": 236,
+        "lines_covered": 214,
+        "lines_missing": 22,
+        "missing_lines": [
+          128,
+          243,
+          244,
+          245,
+          280,
+          281,
+          282,
+          330,
+          331,
+          332
+        ]
+      },
+      {
+        "filename": "technical_analysis/intelligent_alert_system.py",
+        "line_coverage": 91.0,
+        "branch_coverage": 66.67,
+        "lines_total": 200,
+        "lines_covered": 182,
+        "lines_missing": 18,
+        "missing_lines": [
+          108,
+          137,
+          139,
+          141,
+          143,
+          287,
+          291,
+          304,
+          308,
+          318
+        ]
+      },
+      {
+        "filename": "tax_calculation/fee_calculator.py",
+        "line_coverage": 91.18,
+        "branch_coverage": 72.22,
+        "lines_total": 102,
+        "lines_covered": 93,
+        "lines_missing": 9,
+        "missing_lines": [
+          131,
+          132,
+          137,
+          144,
+          153,
+          162,
+          191,
+          226,
+          231
+        ]
+      },
+      {
+        "filename": "technical_analysis/integrated_analysis.py",
+        "line_coverage": 92.44,
+        "branch_coverage": 73.61,
+        "lines_total": 172,
+        "lines_covered": 159,
+        "lines_missing": 13,
+        "missing_lines": [
+          141,
+          152,
+          154,
+          179,
+          180,
+          181,
+          242,
+          250,
+          276,
+          277
+        ]
+      },
+      {
+        "filename": "tax_calculation/nisa_manager.py",
+        "line_coverage": 94.67,
+        "branch_coverage": 68.17999999999999,
+        "lines_total": 150,
+        "lines_covered": 142,
+        "lines_missing": 8,
+        "missing_lines": [
+          115,
+          116,
+          126,
+          131,
+          238,
+          288,
+          360,
+          366
+        ]
+      },
+      {
+        "filename": "utils/data_validator.py",
+        "line_coverage": 94.74000000000001,
+        "branch_coverage": 93.33,
+        "lines_total": 152,
+        "lines_covered": 144,
+        "lines_missing": 8,
+        "missing_lines": [
+          196,
+          237,
+          238,
+          288,
+          296,
+          347,
+          348,
+          349
+        ]
+      },
+      {
+        "filename": "tax_calculation/tax_calculator.py",
+        "line_coverage": 94.93,
+        "branch_coverage": 76.09,
+        "lines_total": 138,
+        "lines_covered": 131,
+        "lines_missing": 7,
+        "missing_lines": [
+          75,
+          95,
+          152,
+          163,
+          201,
+          206,
+          213
+        ]
+      },
+      {
+        "filename": "technical_analysis/indicators.py",
+        "line_coverage": 97.11,
+        "branch_coverage": 87.5,
+        "lines_total": 242,
+        "lines_covered": 235,
+        "lines_missing": 7,
+        "missing_lines": [
+          115,
+          182,
+          409,
+          410,
+          411,
+          481,
+          483
+        ]
+      },
+      {
+        "filename": "__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "config/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "data_collector/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "data_collector/symbol_manager.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 98.21,
+        "lines_total": 125,
+        "lines_covered": 125,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "models/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "performance_tracking/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 6,
+        "lines_covered": 6,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "risk_management/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 3,
+        "lines_covered": 3,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "tax_calculation/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 5,
+        "lines_covered": 5,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "technical_analysis/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      },
+      {
+        "filename": "utils/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      }
+    ],
+    "medium": [
+      {
+        "filename": "performance_tracking/performance_tracker.py",
+        "line_coverage": 70.61,
+        "branch_coverage": 54.290000000000006,
+        "lines_total": 228,
+        "lines_covered": 161,
+        "lines_missing": 67,
+        "missing_lines": [
+          124,
+          125,
+          128,
+          129,
+          132,
+          133,
+          161,
+          162,
+          164,
+          165
+        ]
+      },
+      {
+        "filename": "performance_tracking/tendency_analyzer.py",
+        "line_coverage": 72.39,
+        "branch_coverage": 55.400000000000006,
+        "lines_total": 536,
+        "lines_covered": 388,
+        "lines_missing": 148,
+        "missing_lines": [
+          200,
+          203,
+          220,
+          221,
+          223,
+          224,
+          229,
+          230,
+          235,
+          237
+        ]
+      },
+      {
+        "filename": "data_collector/watchlist_storage.py",
+        "line_coverage": 73.72999999999999,
+        "branch_coverage": 67.86,
+        "lines_total": 217,
+        "lines_covered": 160,
+        "lines_missing": 57,
+        "missing_lines": [
+          133,
+          134,
+          159,
+          160,
+          161,
+          213,
+          214,
+          215,
+          240,
+          241
+        ]
+      },
+      {
+        "filename": "config/settings.py",
+        "line_coverage": 76.92,
+        "branch_coverage": 61.11,
+        "lines_total": 182,
+        "lines_covered": 140,
+        "lines_missing": 42,
+        "missing_lines": [
+          123,
+          124,
+          125,
+          126,
+          127,
+          128,
+          265,
+          269,
+          273,
+          277
+        ]
+      },
+      {
+        "filename": "performance_tracking/improvement_suggestions.py",
+        "line_coverage": 77.39,
+        "branch_coverage": 51.67,
+        "lines_total": 230,
+        "lines_covered": 178,
+        "lines_missing": 52,
+        "missing_lines": [
+          211,
+          237,
+          328,
+          329,
+          330,
+          364,
+          390,
+          416,
+          442,
+          449
+        ]
+      },
+      {
+        "filename": "data_collector/backup_manager.py",
+        "line_coverage": 78.60000000000001,
+        "branch_coverage": 75.0,
+        "lines_total": 229,
+        "lines_covered": 180,
+        "lines_missing": 49,
+        "missing_lines": [
+          113,
+          115,
+          116,
+          117,
+          146,
+          147,
+          149,
+          150,
+          151,
+          152
+        ]
+      },
+      {
+        "filename": "risk_management/risk_manager.py",
+        "line_coverage": 79.03999999999999,
+        "branch_coverage": 75.64,
+        "lines_total": 229,
+        "lines_covered": 181,
+        "lines_missing": 48,
+        "missing_lines": [
+          70,
+          136,
+          137,
+          138,
+          179,
+          180,
+          189,
+          190,
+          191,
+          210
+        ]
+      }
+    ],
+    "hard": [],
+    "very_hard": [],
+    "examples": [
+      {
+        "filename": "examples/intelligent_alert_demo.py",
+        "line_coverage": 0.0,
+        "branch_coverage": 0.0,
+        "lines_total": 108,
+        "lines_covered": 0,
+        "lines_missing": 108,
+        "missing_lines": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          13,
+          14,
+          16,
+          21,
+          22
+        ]
+      },
+      {
+        "filename": "examples/signal_generator_demo.py",
+        "line_coverage": 5.2780000000000005,
+        "branch_coverage": 0.0,
+        "lines_total": 360,
+        "lines_covered": 19,
+        "lines_missing": 341,
+        "missing_lines": [
+          30,
+          31,
+          32,
+          35,
+          38,
+          39,
+          42,
+          43,
+          45,
+          47
+        ]
+      },
+      {
+        "filename": "examples/technical_analysis_demo.py",
+        "line_coverage": 5.743,
+        "branch_coverage": 0.0,
+        "lines_total": 296,
+        "lines_covered": 17,
+        "lines_missing": 279,
+        "missing_lines": [
+          24,
+          25,
+          26,
+          29,
+          32,
+          33,
+          36,
+          37,
+          39,
+          41
+        ]
+      },
+      {
+        "filename": "examples/support_resistance_demo.py",
+        "line_coverage": 6.32,
+        "branch_coverage": 0.0,
+        "lines_total": 269,
+        "lines_covered": 17,
+        "lines_missing": 252,
+        "missing_lines": [
+          24,
+          25,
+          26,
+          29,
+          32,
+          33,
+          36,
+          37,
+          39,
+          41
+        ]
+      },
+      {
+        "filename": "examples/risk_management_demo.py",
+        "line_coverage": 8.718,
+        "branch_coverage": 0.0,
+        "lines_total": 195,
+        "lines_covered": 17,
+        "lines_missing": 178,
+        "missing_lines": [
+          26,
+          27,
+          30,
+          41,
+          43,
+          47,
+          48,
+          49,
+          51,
+          53
+        ]
+      },
+      {
+        "filename": "examples/basic_usage.py",
+        "line_coverage": 11.57,
+        "branch_coverage": 0.0,
+        "lines_total": 121,
+        "lines_covered": 14,
+        "lines_missing": 107,
+        "missing_lines": [
+          21,
+          22,
+          23,
+          26,
+          29,
+          35,
+          38,
+          41,
+          42,
+          43
+        ]
+      },
+      {
+        "filename": "examples/__init__.py",
+        "line_coverage": 100.0,
+        "branch_coverage": 100.0,
+        "lines_total": 0,
+        "lines_covered": 0,
+        "lines_missing": 0,
+        "missing_lines": []
+      }
+    ]
+  },
+  "test_analysis": {
+    "total_test_files": 31,
+    "test_file_coverage": {},
+    "missing_test_files": [
+      "examples/basic_usage.py",
+      "examples/intelligent_alert_demo.py",
+      "examples/risk_management_demo.py",
+      "examples/support_resistance_demo.py",
+      "examples/technical_analysis_demo.py",
+      "examples/signal_generator_demo.py",
+      "technical_analysis/indicators.py"
+    ],
+    "test_suggestions": []
+  },
+  "recommendations": [
+    "🟢 簡単改善対象: 28ファイル - 80%以上のカバレッジを100%に向上",
+    "🟡 中程度改善対象: 7ファイル - エラーハンドリングやエッジケースのテスト追加",
+    "📚 examplesディレクトリ: 7ファイル (平均19.7%) - デモ・教育用コードのため低カバレッジは許容",
+    "📝 テストファイル不足: 7ファイル - 新規テストファイル作成が必要"
+  ]
+}
