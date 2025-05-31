@@ -56,6 +56,23 @@ class TestDataValidator:
             'volume': volumes
         })
     
+    def test_zero_volume_tolerance_check(self):
+        """ゼロ出来高許容度チェックテスト"""
+        # ゼロ出来高が多いデータを作成
+        zero_volume_data = self.valid_data.copy()
+        
+        # 10%のデータをゼロ出来高にする（デフォルト許容度5%を超える）
+        zero_count = int(len(zero_volume_data) * 0.1)
+        zero_volume_data.loc[:zero_count, 'volume'] = 0
+        
+        quality_issues = self.validator._check_data_quality(zero_volume_data)
+        
+        # 警告が出ることを確認
+        warning_issues = quality_issues["warning"]
+        has_zero_volume_warning = any("ゼロ出来高比率が高い" in issue for issue in warning_issues)
+        assert has_zero_volume_warning
+    
+    
     def _create_invalid_test_data(self) -> pd.DataFrame:
         """異常なテストデータ作成"""
         dates = pd.date_range(start='2024-01-01', periods=50, freq='h')
@@ -570,3 +587,102 @@ class TestDataValidator:
             'close': closes,
             'volume': volumes
         })
+    
+    def test_zero_volume_tolerance_check(self):
+        """ゼロ出来高許容度チェックテスト"""
+        # ゼロ出来高が多いデータを作成
+        zero_volume_data = self.valid_data.copy()
+        
+        # 10%のデータをゼロ出来高にする（デフォルト許容度5%を超える）
+        zero_count = int(len(zero_volume_data) * 0.1)
+        zero_volume_data.loc[:zero_count, 'volume'] = 0
+        
+        quality_issues = self.validator._check_data_quality(zero_volume_data)
+        
+        # 警告が出ることを確認
+
+        warning_issues = quality_issues["warning"]
+        has_zero_volume_warning = any("ゼロ出来高比率が高い" in issue for issue in warning_issues)
+        assert has_zero_volume_warning
+    
+    def test_interpolation_edge_cases(self):
+        """補間処理エッジケーステスト"""
+        # 先頭と末尾に欠損値があるデータ
+        edge_missing_data = self.valid_data.copy()
+        edge_missing_data.loc[0, "close"] = np.nan  # 先頭
+        edge_missing_data.loc[len(edge_missing_data)-1, "close"] = np.nan  # 末尾
+        edge_missing_data.loc[50, "volume"] = np.nan  # 中間
+        
+        # 補間処理実行
+        interpolated = self.validator.interpolate_missing_data(edge_missing_data)
+        
+        # 結果の確認
+        assert isinstance(interpolated, pd.DataFrame)
+        # volume の欠損値は0で補間される
+        assert interpolated.loc[50, "volume"] == 0
+    
+    def test_error_handling_in_gap_detection(self):
+        """時間ギャップ検出でのエラーハンドリングテスト"""
+        # 無効なタイムスタンプデータを作成
+        invalid_time_data = pd.DataFrame({
+            'timestamp': [None, 'invalid', datetime.now()],
+            'open': [1000, 1001, 1002],
+            'high': [1010, 1011, 1012],
+            'low': [990, 991, 992],
+            'close': [1005, 1006, 1007],
+            'volume': [5000, 5001, 5002]
+        })
+        
+        # エラーが発生してもリストが返されることを確認
+        gaps = self.validator._detect_time_gaps(invalid_time_data)
+        assert isinstance(gaps, list)
+    
+    def test_cleaning_logging_for_outliers(self):
+        """外れ値除去時のログ出力テスト"""
+        # 極端な外れ値を含むデータを作成
+        outlier_data = self.valid_data.copy()
+        outlier_data.loc[10, 'close'] = outlier_data['close'].mean() * 100  # 極端な値
+        outlier_data.loc[20, 'volume'] = -1000  # 負の出来高
+        
+        # クリーニング実行（ログが出力されることを確認）
+        cleaned = self.validator.clean_data(outlier_data)
+        
+        # 外れ値と負の出来高が除去されている
+        assert len(cleaned) <= len(outlier_data)
+        assert (cleaned['volume'] >= 0).all()
+    
+    def test_interpolation_exception_handling(self):
+        """補間処理での例外ハンドリングテスト"""
+        # 補間できない構造のデータを作成
+        problem_data = pd.DataFrame({
+            'timestamp': [pd.NaT, pd.NaT, pd.NaT],  # 全てNaT
+            'open': [np.nan, np.nan, np.nan],
+            'high': [np.nan, np.nan, np.nan],
+            'low': [np.nan, np.nan, np.nan],
+            'close': [np.nan, np.nan, np.nan],
+            'volume': [np.nan, np.nan, np.nan]
+        })
+        
+        # 例外が発生しても元のDataFrameが返されることを確認
+        result = self.validator.interpolate_missing_data(problem_data)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(problem_data)
+    
+    def test_gap_detection_with_uniform_intervals(self):
+        """時間間隔が一定でmodeが空のケースのテスト"""
+        # 全く同じ時間間隔のデータを作成（mode計算で空になるケース）
+        uniform_data = pd.DataFrame({
+            'timestamp': [datetime(2024, 1, 1, i, 0) for i in range(10, 13)],  # 1時間間隔
+            'open': [1000, 1001, 1002],
+            'high': [1010, 1011, 1012],
+            'low': [990, 991, 992],
+            'close': [1005, 1006, 1007],
+            'volume': [5000, 5001, 5002]
+        })
+        
+        # ギャップ検出を実行
+        gaps = self.validator._detect_time_gaps(uniform_data)
+        
+        # uniform_dataではギャップがないことを確認
+        assert isinstance(gaps, list)
+        assert len(gaps) == 0

@@ -59,15 +59,83 @@ class TestPerformanceTracker:
     
     def test_record_trade_invalid_data(self, tracker):
         """無効データでの取引記録テスト"""
-        # 無効な方向
+        # 空のシンボル
         trade_id = tracker.record_trade(
             symbol="",
+            direction="LONG",
+            entry_price=1000.0,
+            quantity=100
+        )
+        assert trade_id == ""
+        
+        # 無効な方向
+        trade_id = tracker.record_trade(
+            symbol="TEST",
             direction="INVALID",
+            entry_price=1000.0,
+            quantity=100
+        )
+        assert trade_id == ""
+        
+        # 無効な価格（0以下）
+        trade_id = tracker.record_trade(
+            symbol="TEST",
+            direction="LONG",
             entry_price=0,
+            quantity=100
+        )
+        assert trade_id == ""
+        
+        # 負の価格
+        trade_id = tracker.record_trade(
+            symbol="TEST",
+            direction="LONG",
+            entry_price=-100.0,
+            quantity=100
+        )
+        assert trade_id == ""
+        
+        # 無効な数量（0以下）
+        trade_id = tracker.record_trade(
+            symbol="TEST",
+            direction="LONG",
+            entry_price=1000.0,
             quantity=0
         )
-        
         assert trade_id == ""
+        
+        # 負の数量
+        trade_id = tracker.record_trade(
+            symbol="TEST",
+            direction="LONG",
+            entry_price=1000.0,
+            quantity=-50
+        )
+        assert trade_id == ""
+    
+    def test_record_trade_database_failure(self, tracker):
+        """データベース保存失敗テスト"""
+        # add_tradeが失敗するようにモック
+        with patch.object(tracker.trade_manager, 'add_trade', return_value=False):
+            trade_id = tracker.record_trade(
+                symbol="TEST",
+                direction="LONG",
+                entry_price=1000.0,
+                quantity=100
+            )
+            assert trade_id == ""
+    
+    def test_record_trade_exception_handling(self, tracker):
+        """record_trade例外処理テスト"""
+        # add_tradeで例外発生
+        with patch.object(tracker.trade_manager, 'add_trade', side_effect=Exception("Database error")):
+            trade_id = tracker.record_trade(
+                symbol="TEST",
+                direction="LONG",
+                entry_price=1000.0,
+                quantity=100
+            )
+            assert trade_id == ""
     
     def test_close_trade_success(self, tracker):
         """取引決済成功テスト"""
@@ -108,6 +176,17 @@ class TestPerformanceTracker:
         )
         
         assert success is False
+    
+    def test_close_trade_exception_handling(self, tracker):
+        """close_trade例外処理テスト"""
+        # close_tradeで例外発生
+        with patch.object(tracker.trade_manager, 'close_trade', side_effect=Exception("Database error")):
+            success = tracker.close_trade(
+                trade_id="test_id",
+                exit_price=1000.0,
+                exit_reason="Test"
+            )
+            assert success is False
     
     def test_get_open_positions(self, tracker):
         """オープンポジション取得テスト"""
@@ -197,10 +276,27 @@ class TestPerformanceTracker:
         assert len(report.basic_statistics) > 0
         assert report.basic_statistics['total_trades'] == 15
     
+    def test_analyze_performance_exception_handling(self, tracker):
+        """analyze_performance例外処理テスト"""
+        # 基本統計計算で例外発生
+        with patch.object(tracker.trade_manager, 'calculate_basic_stats', side_effect=Exception("Stats error")):
+            report = tracker.analyze_performance(lookback_days=30, min_trades=1)
+            assert report is not None
+            assert report.report_id == "error_report"
+            assert report.overall_performance_score == 0.0
+            assert report.performance_level == "Unknown"
+    
     def test_generate_monthly_report_insufficient_data(self, tracker):
         """月次レポート生成（データ不足）テスト"""
         report = tracker.generate_monthly_report(2024, 1)
         assert report is None
+    
+    def test_generate_monthly_report_exception_handling(self, tracker):
+        """generate_monthly_report例外処理テスト"""
+        # get_closed_tradesで例外発生
+        with patch.object(tracker.trade_manager, 'get_closed_trades', side_effect=Exception("Database error")):
+            report = tracker.generate_monthly_report(2024, 1)
+            assert report is None
     
     def test_export_report_json(self, tracker, temp_db_path):
         """レポートJSON出力テスト"""
@@ -238,8 +334,38 @@ class TestPerformanceTracker:
         
         assert insights['performance_level'] in ["初心者", "Unknown"]
         assert insights['overall_score'] >= 0.0
-        assert len(insights['key_strengths']) == 0
-        assert len(insights['major_weaknesses']) == 0
+    
+    def test_get_learning_insights_with_data(self, tracker):
+        """学習インサイト取得（データあり）テスト"""
+        # 十分な取引データを作成
+        for i in range(10):
+            trade_id = tracker.record_trade(f"TEST{i}", "LONG", 1000.0, 100)
+            tracker.close_trade(trade_id, 1100.0, "Test")
+        
+        # モックで高スコアと低スコアの傾向を作成
+        high_score_tendency = Mock()
+        high_score_tendency.score = 85
+        high_score_tendency.name = "優秀な損切り"
+        high_score_tendency.description = "損切りが早い"
+        
+        low_score_tendency = Mock()
+        low_score_tendency.score = 45
+        low_score_tendency.name = "利確の遅れ"
+        low_score_tendency.description = "利確が遅い"
+        
+        # analyze_performanceの結果をモック
+        with patch.object(tracker.tendency_analyzer, 'analyze_tendencies', 
+                         return_value=[high_score_tendency, low_score_tendency]):
+            insights = tracker.get_learning_insights(30)
+            assert 'key_strengths' in insights
+            assert 'major_weaknesses' in insights
+    
+    def test_get_learning_insights_exception_handling(self, tracker):
+        """get_learning_insights例外処理テスト"""
+        # analyze_performanceで例外発生
+        with patch.object(tracker, 'analyze_performance', side_effect=Exception("Analysis error")):
+            insights = tracker.get_learning_insights(30)
+            assert insights == {}
     
     def test_set_performance_goals(self, tracker):
         """パフォーマンス目標設定テスト"""

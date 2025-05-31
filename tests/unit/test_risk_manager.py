@@ -626,7 +626,4 @@ class TestRiskManager(unittest.TestCase):
         close_record = self.risk_manager.trade_history[-1]
         self.assertEqual(close_record["action"], "close")
         self.assertEqual(close_record["symbol"], symbol)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    

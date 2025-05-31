@@ -242,6 +242,33 @@ class TestTaxCalculator:
         
         # デフォルト設定（小数点以下2桁）で丸める
         assert rounded == Decimal('123.46')
+    
+    def test_process_sell_trade_exact_quantity(self, tax_calculator):
+        """FIFO売却処理での完全消化テスト"""
+        # 買い取引を先に追加
+        buy_trade = TradeRecord(
+            symbol="7203.T",
+            date=date(2024, 1, 15),
+            action="buy",
+            quantity=100,
+            price=Decimal('2500'),
+            fee=Decimal('55')
+        )
+        tax_calculator.add_trade(buy_trade)
+        
+        # 完全に同じ数量を売却
+        sell_trade = TradeRecord(
+            symbol="7203.T",
+            date=date(2024, 3, 20),
+            action="sell",
+            quantity=100,  # 完全消化
+            price=Decimal('2800'),
+            fee=Decimal('55')
+        )
+        tax_calculator.add_trade(sell_trade)
+        
+        # 保有がゼロになっていることを確認
+        assert len(tax_calculator.holdings["7203.T"]) == 0
 
 
 class TestTradeRecord:
