@@ -109,7 +109,7 @@ class SettingsManager:
     
     def __init__(self, config_file: str = "config/settings.json"):
         self.config_file = Path(config_file)
-        self.config_file.parent.mkdir(exist_ok=True)
+        self.config_file.parent.mkdir(parents=True, exist_ok=True)
         self._settings: Optional[AppSettings] = None
         
         # 環境変数読み込み

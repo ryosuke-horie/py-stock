@@ -115,6 +115,8 @@ class DataValidator:
             # 価格変動の異常検出
             df_temp = df.copy()  # 元のDataFrameを変更しないようにコピー
             df_temp['price_change'] = df_temp['close'].pct_change()
+            # FutureWarning を避けるため、explicit に float64 を指定
+            df_temp['price_change'] = df_temp['price_change'].astype('float64')
             extreme_changes = df_temp[abs(df_temp['price_change']) > self.price_change_threshold]
             
             for idx, row in extreme_changes.iterrows():
