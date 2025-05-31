@@ -218,7 +218,7 @@ class TestSignalGenerator:
     
     def test_evaluate_condition_equal_operator(self):
         """等号演算子での条件評価テスト"""
-        indicators = {'near_support': True, 'test_value': 50.0}
+        indicators = {'near_support': True, 'test_value': 50.0, 'volume_ratio': 2.5}
         
         # ブール値の等価比較
         condition1 = {'indicator': 'near_support', 'operator': '==', 'value': True}
@@ -230,7 +230,6 @@ class TestSignalGenerator:
         
         condition3 = {'indicator': 'test_value', 'operator': '==', 'value': 60.0}
         assert self.generator._evaluate_condition(condition3, indicators) is False
-        assert self.generator._evaluate_condition(condition3, indicators) == True
         
         # 等価比較テスト
         condition4 = {'indicator': 'volume_ratio', 'operator': '==', 'value': 2.5}
