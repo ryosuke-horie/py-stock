@@ -48,7 +48,7 @@ jobs:
           --cov=src \
           --cov-branch \
           --cov-report=term-missing \
-          --cov-fail-under=20 \
+          --cov-fail-under=60 \
           -v \
           --ignore=tests/unit/test_risk_manager.py \
           --ignore=tests/unit/test_technical_indicators.py \
