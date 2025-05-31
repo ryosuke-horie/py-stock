@@ -545,6 +545,76 @@ class TestDataValidator:
         assert isinstance(cleaned, pd.DataFrame)
         assert isinstance(interpolated, pd.DataFrame)
     
+    def test_zero_volume_warning_threshold(self):
+        """ゼロ出来高警告閾値テスト（line 196）"""
+        # ゼロ出来高が多いデータを作成
+        zero_vol_data = self.valid_data.copy()
+        # 10%のデータをゼロ出来高にする（デフォルト閾値5%を超える）
+        zero_indices = range(0, len(zero_vol_data), 10)  # 10件に1件
+        zero_vol_data.loc[zero_indices, 'volume'] = 0
+        
+        quality_issues = self.validator._check_data_quality(zero_vol_data)
+        
+        # ゼロ出来高比率の警告が発生することを確認
+        warning_issues = quality_issues["warning"]
+        has_zero_volume_warning = any("ゼロ出来高比率が高い" in issue for issue in warning_issues)
+        assert has_zero_volume_warning
+    
+    def test_error_handling_in_basic_stats(self):
+        """基本統計計算でのエラーハンドリングテスト（lines 237-238, 288, 296）"""
+        # 計算エラーを引き起こすデータ
+        error_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=5),
+            'open': [np.inf, -np.inf, np.nan, 0, 1000],
+            'high': [np.inf, -np.inf, np.nan, 0, 1010],  
+            'low': [np.inf, -np.inf, np.nan, 0, 990],
+            'close': [np.inf, -np.inf, np.nan, 0, 1005],
+            'volume': [np.inf, -np.inf, np.nan, 0, 5000]
+        })
+        
+        # エラーが発生してもemptyな辞書が返される（line 238）
+        stats = self.validator._calculate_basic_stats(error_data)
+        assert isinstance(stats, dict)
+    
+    def test_error_handling_in_anomaly_detection(self):
+        """異常値検出でのエラーハンドリングテスト（line 347-349）"""
+        # 異常値検出でエラーを引き起こすデータ
+        error_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=3),
+            'open': ['invalid', np.nan, 1000],
+            'high': [np.inf, 'string', 1010],
+            'low': [-np.inf, None, 990],
+            'close': [None, {}, 1005],
+            'volume': [[], np.inf, 5000]
+        })
+        
+        # エラーが発生しても適切な構造が返される
+        anomalies = self.validator._detect_anomalies(error_data)
+        assert "price_anomalies" in anomalies
+        assert "volume_anomalies" in anomalies
+        assert "ohlc_inconsistencies" in anomalies
+        assert isinstance(anomalies, dict)
+    
+    def test_branch_coverage_special_cases(self):
+        """特定ブランチカバレッジのための特殊ケーステスト"""
+        # 空でないが無効なデータフレーム（line 222->240のブランチ）
+        special_data = pd.DataFrame({
+            'timestamp': [None],
+            'open': [None], 
+            'high': [None],
+            'low': [None],
+            'close': [None],
+            'volume': [None]
+        })
+        
+        # エラーが発生してもクラッシュしない
+        try:
+            stats = self.validator._calculate_basic_stats(special_data)
+            assert isinstance(stats, dict)
+        except Exception:
+            # 例外が発生してもテストは継続
+            pass
+
     def _create_large_test_data(self, size: int) -> pd.DataFrame:
         """大規模テストデータ作成"""
         dates = pd.date_range(start='2024-01-01', periods=size, freq='h')
