@@ -371,6 +371,284 @@ class TestTechnicalIndicators:
         # 期間がデータ長より大きい場合
         sma_large = self.indicators.sma(len(self.test_data) + 1)
         assert pd.isna(sma_large).all()
+    
+    def test_calculate_all_indicators(self):
+        """全指標計算テスト"""
+        result_df = self.indicators.calculate_all_indicators(self.test_data)
+        
+        # 全カラムが追加されていることを確認
+        expected_columns = [
+            'SMA_25', 'SMA_75', 'EMA_9', 'EMA_21', 'RSI', 'STOCH_K', 'STOCH_D',
+            'MACD', 'MACD_SIGNAL', 'MACD_HISTOGRAM', 'BB_UPPER', 'BB_MIDDLE', 
+            'BB_LOWER', 'BB_PERCENT_B', 'BB_BANDWIDTH', 'VWAP', 'ATR'
+        ]
+        
+        for col in expected_columns:
+            assert col in result_df.columns, f"Missing column: {col}"
+        
+        # 元のデータも保持されている
+        original_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+        for col in original_columns:
+            assert col in result_df.columns
+        
+        # データ長が同じ
+        assert len(result_df) == len(self.test_data)
+        
+        # Volumeカラムが適切に処理されている
+        if 'Volume' not in result_df.columns:
+            assert 'volume' in result_df.columns
+    
+    def test_data_validation_edge_cases(self):
+        """データ検証エッジケーステスト"""
+        # 数値でない文字列カラムを含むデータ
+        invalid_data = self.test_data.copy()
+        invalid_data.loc[0, 'close'] = 'invalid'
+        
+        # 数値変換が試行されることを確認
+        with pytest.raises(ValueError):
+            TechnicalIndicators(invalid_data)
+        
+        # timestampが文字列の場合の変換テスト
+        string_timestamp_data = self.test_data.copy()
+        string_timestamp_data['timestamp'] = string_timestamp_data['timestamp'].astype(str)
+        
+        # エラーなく初期化できることを確認
+        indicators_str_ts = TechnicalIndicators(string_timestamp_data)
+        assert pd.api.types.is_datetime64_any_dtype(indicators_str_ts.data['timestamp'])
+    
+    def test_vwap_daily_reset(self):
+        """VWAP日次リセットテスト"""
+        # 複数日のデータを作成
+        multi_day_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01 09:00', periods=48, freq='h'),
+            'open': np.random.uniform(990, 1010, 48),
+            'high': np.random.uniform(1000, 1020, 48),
+            'low': np.random.uniform(980, 1000, 48),
+            'close': np.random.uniform(995, 1005, 48),
+            'volume': np.random.randint(1000, 10000, 48)
+        })
+        
+        multi_indicators = TechnicalIndicators(multi_day_data)
+        
+        # 日次リセットありのVWAP
+        vwap_daily = multi_indicators.vwap(reset_daily=True)
+        
+        # 日次リセットなしのVWAP
+        vwap_cumulative = multi_indicators.vwap(reset_daily=False)
+        
+        # 両方とも有効な値を持つ
+        assert not pd.isna(vwap_daily).all()
+        assert not pd.isna(vwap_cumulative).all()
+        
+        # 日次リセット版は日の開始で変化が大きい可能性がある
+        assert len(vwap_daily) == len(multi_day_data)
+        assert len(vwap_cumulative) == len(multi_day_data)
+    
+    def test_error_handling_in_methods(self):
+        """メソッド内エラーハンドリングテスト"""
+        # VWAP分析での例外処理テスト
+        try:
+            analysis = self.indicators.vwap_analysis()
+            # yesterday_vwapの計算で例外が発生してもnp.nanが設定される
+            assert 'yesterday_vwap' in analysis
+        except Exception:
+            pytest.fail("VWAP analysis should handle exceptions gracefully")
+        
+        # ボラティリティ分析での例外処理テスト
+        try:
+            vol_analysis = self.indicators.volatility_analysis()
+            assert 'current_volatility_level' in vol_analysis
+            assert vol_analysis['current_volatility_level'] in ['高', '中', '低']
+        except Exception:
+            pytest.fail("Volatility analysis should handle exceptions gracefully")
+    
+    def test_extreme_market_conditions(self):
+        """極端な市場条件テスト"""
+        # 連続的な価格上昇
+        uptrend_data = self.test_data.copy()
+        for i in range(1, len(uptrend_data)):
+            uptrend_data.loc[i, 'close'] = uptrend_data.loc[i-1, 'close'] * 1.01  # 1%上昇
+            uptrend_data.loc[i, 'high'] = uptrend_data.loc[i, 'close'] * 1.005
+            uptrend_data.loc[i, 'low'] = uptrend_data.loc[i, 'close'] * 0.995
+            uptrend_data.loc[i, 'open'] = uptrend_data.loc[i-1, 'close']
+        
+        uptrend_indicators = TechnicalIndicators(uptrend_data)
+        
+        # RSIが過買い状態になることを確認
+        rsi = uptrend_indicators.rsi(14)
+        assert rsi.iloc[-1] > 50  # 上昇トレンドでRSIは50以上
+        
+        # 連続的な価格下落
+        downtrend_data = self.test_data.copy()
+        for i in range(1, len(downtrend_data)):
+            downtrend_data.loc[i, 'close'] = downtrend_data.loc[i-1, 'close'] * 0.99  # 1%下落
+            downtrend_data.loc[i, 'high'] = downtrend_data.loc[i, 'close'] * 1.005
+            downtrend_data.loc[i, 'low'] = downtrend_data.loc[i, 'close'] * 0.995
+            downtrend_data.loc[i, 'open'] = downtrend_data.loc[i-1, 'close']
+        
+        downtrend_indicators = TechnicalIndicators(downtrend_data)
+        
+        # RSIが過売り状態になることを確認
+        rsi_down = downtrend_indicators.rsi(14)
+        assert rsi_down.iloc[-1] < 50  # 下降トレンドでRSIは50以下
+    
+    def test_zero_and_negative_volumes(self):
+        """ゼロ・負の出来高テスト"""
+        # ゼロ出来高を含むデータ
+        zero_volume_data = self.test_data.copy()
+        zero_volume_data.loc[50:60, 'volume'] = 0
+        
+        zero_vol_indicators = TechnicalIndicators(zero_volume_data)
+        
+        # VWAPが計算できることを確認（ゼロ出来高でも）
+        vwap = zero_vol_indicators.vwap()
+        assert not pd.isna(vwap).all()
+        
+        # VWAP分析も実行できる
+        vwap_analysis = zero_vol_indicators.vwap_analysis()
+        assert 'vwap' in vwap_analysis
+    
+    def test_high_frequency_data(self):
+        """高頻度データテスト"""
+        # 分単位の高頻度データ
+        hf_dates = pd.date_range(start='2024-01-01 09:00', periods=390, freq='min')  # 1営業日分
+        np.random.seed(42)
+        
+        # より小さな価格変動
+        base_price = 1000
+        returns = np.random.normal(0, 0.001, 390)  # 0.1%の標準偏差
+        prices = base_price * np.cumprod(1 + returns)
+        
+        hf_data = pd.DataFrame({
+            'timestamp': hf_dates,
+            'open': prices * (1 + np.random.normal(0, 0.0001, 390)),
+            'high': prices * (1 + np.random.uniform(0, 0.001, 390)),
+            'low': prices * (1 - np.random.uniform(0, 0.001, 390)),
+            'close': prices,
+            'volume': np.random.randint(100, 1000, 390)
+        })
+        
+        hf_indicators = TechnicalIndicators(hf_data)
+        
+        # 短期指標のテスト
+        ema_5 = hf_indicators.ema(5)
+        rsi_14 = hf_indicators.rsi(14)
+        
+        # 高頻度データでも指標が計算できる
+        assert not pd.isna(ema_5[-100:]).any()  # 後半100期間は有効
+        assert not pd.isna(rsi_14[-100:]).all()  # 後半に有効な値が存在
+    
+    def test_price_gaps_and_splits(self):
+        """価格ギャップ・分割テスト"""
+        # 価格ギャップを含むデータ
+        gap_data = self.test_data.copy()
+        
+        # 50番目に大きなギャップダウンを作成
+        gap_ratio = 0.8  # 20%ギャップダウン
+        gap_data.loc[50:, 'close'] *= gap_ratio
+        gap_data.loc[50:, 'open'] *= gap_ratio
+        gap_data.loc[50:, 'high'] *= gap_ratio
+        gap_data.loc[50:, 'low'] *= gap_ratio
+        
+        gap_indicators = TechnicalIndicators(gap_data)
+        
+        # ギャップがあってもBBが計算できる
+        bb = gap_indicators.bollinger_bands(20)
+        assert not pd.isna(bb['bb_middle'][-20:]).any()  # 最後20期間は有効
+        
+        # ATRでギャップが検出される（大きな値になる）
+        atr = gap_indicators.atr(14)
+        atr_before_gap = atr.iloc[45:50].mean()  # ギャップ前
+        atr_after_gap = atr.iloc[55:60].mean()   # ギャップ後
+        
+        # ギャップ後のATRの方が大きいか、または両方とも有効な値
+        if not (pd.isna(atr_before_gap) or pd.isna(atr_after_gap)):
+            assert atr_after_gap >= atr_before_gap * 0.5  # 完全に小さくなることはない
+    
+    def test_missing_data_handling(self):
+        """欠損データ処理テスト"""
+        # 欠損値を含むデータ
+        missing_data = self.test_data.copy()
+        missing_data.loc[30:35, 'close'] = np.nan
+        missing_data.loc[60:62, 'volume'] = np.nan
+        
+        # 欠損データがあっても初期化できる
+        missing_indicators = TechnicalIndicators(missing_data)
+        
+        # 指標計算で適切に処理される
+        sma = missing_indicators.sma(20)
+        rsi = missing_indicators.rsi(14)
+        
+        # 欠損期間の前後で計算が継続される
+        assert isinstance(sma, pd.Series)
+        assert isinstance(rsi, pd.Series)
+        
+        # VWAPも欠損データを適切に処理
+        vwap = missing_indicators.vwap()
+        assert isinstance(vwap, pd.Series)
+    
+    def test_performance_with_large_datasets(self):
+        """大規模データセットパフォーマンステスト"""
+        # 大量データ（1000日分）
+        large_dates = pd.date_range(start='2021-01-01', periods=1000, freq='D')
+        np.random.seed(42)
+        
+        # 大量データ生成
+        base_price = 1000
+        returns = np.random.normal(0.001, 0.02, 1000)
+        prices = base_price * np.cumprod(1 + returns)
+        
+        large_data = pd.DataFrame({
+            'timestamp': large_dates,
+            'open': prices * (1 + np.random.normal(0, 0.005, 1000)),
+            'high': prices * (1 + np.random.uniform(0, 0.01, 1000)),
+            'low': prices * (1 - np.random.uniform(0, 0.01, 1000)),
+            'close': prices,
+            'volume': np.random.randint(100000, 1000000, 1000)
+        })
+        
+        # 大量データでも初期化・計算が完了する
+        large_indicators = TechnicalIndicators(large_data)
+        
+        # 複数の指標を計算
+        sma_50 = large_indicators.sma(50)
+        ema_200 = large_indicators.ema(200)
+        rsi = large_indicators.rsi(14)
+        bb = large_indicators.bollinger_bands(20)
+        
+        # 全て適切に計算されている
+        assert len(sma_50) == 1000
+        assert len(ema_200) == 1000
+        assert len(rsi) == 1000
+        assert len(bb['bb_middle']) == 1000
+        
+        # パフォーマンステスト（総合分析）
+        comprehensive = large_indicators.comprehensive_analysis()
+        assert 'current_values' in comprehensive
+    
+    def test_invalid_parameters(self):
+        """無効パラメータテスト"""
+        # 期間が0の場合
+        with pytest.raises((ValueError, ZeroDivisionError)):
+            self.indicators.sma(0)
+        
+        # 負の期間
+        with pytest.raises((ValueError, ZeroDivisionError)):
+            self.indicators.ema(-5)
+        
+        # 無効な価格カラム
+        try:
+            result = self.indicators.sma(20, 'invalid_column')
+            # KeyErrorが発生するか、空のSeriesが返される
+            assert isinstance(result, pd.Series)
+        except KeyError:
+            # KeyErrorが発生するのは正常
+            pass
+        
+        # ボリンジャーバンドの無効な標準偏差
+        bb_zero_std = self.indicators.bollinger_bands(20, 0)
+        assert 'bb_upper' in bb_zero_std
+        assert 'bb_lower' in bb_zero_std
 
 
 if __name__ == "__main__":

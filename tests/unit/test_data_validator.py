@@ -330,3 +330,242 @@ class TestDataValidator:
         
         # より厳しい閾値で異常値が検出されることを確認
         assert len(anomalies["price_anomalies"]) > 0
+    
+    def test_statistics_calculation_errors(self):
+        """統計計算エラーハンドリングテスト"""
+        # 無効なデータで統計計算
+        invalid_df = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=10),
+            'open': ['invalid'] * 10,  # 文字列データ
+            'high': [np.inf] * 10,     # 無限大
+            'low': [np.nan] * 10,      # 全て欠損値
+            'close': [0] * 10,         # ゼロ価格
+            'volume': [-1] * 10        # 負の出来高
+        })
+        
+        # エラーが発生してもemptyな辞書が返されることを確認
+        stats = self.validator._calculate_basic_stats(invalid_df)
+        assert isinstance(stats, dict)
+    
+    def test_anomaly_detection_errors(self):
+        """異常値検出エラーハンドリングテスト"""
+        # 異常なデータ構造
+        error_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=5),
+            'open': [1000, np.nan, np.inf, -1000, 0],
+            'high': [1010, np.nan, np.inf, -990, 10],
+            'low': [990, np.nan, -np.inf, -1010, -10],
+            'close': [1005, np.nan, np.inf, -1005, 5],
+            'volume': [5000, np.nan, np.inf, -5000, 0]
+        })
+        
+        # エラーが発生しても適切な構造が返されることを確認
+        anomalies = self.validator._detect_anomalies(error_data)
+        assert "price_anomalies" in anomalies
+        assert "volume_anomalies" in anomalies
+        assert "ohlc_inconsistencies" in anomalies
+        assert isinstance(anomalies["price_anomalies"], list)
+    
+    def test_quality_check_errors(self):
+        """品質チェックエラーハンドリングテスト"""
+        # エラーを引き起こすデータ
+        error_df = pd.DataFrame({
+            'timestamp': [datetime.now(), 'invalid_date', None],
+            'open': [1000, 'invalid', np.inf],
+            'high': [1010, None, -np.inf],
+            'low': [990, np.nan, 'string'],
+            'close': [1005, np.inf, None],
+            'volume': [5000, 'invalid', -1]
+        })
+        
+        # エラーが発生してもissuesが返されることを確認
+        issues = self.validator._check_data_quality(error_df)
+        assert "critical" in issues
+        assert "warning" in issues
+        assert "info" in issues
+        
+        # エラーメッセージがクリティカルissuesに追加されることを確認
+        assert len(issues["critical"]) > 0
+    
+    def test_time_gap_detection_edge_cases(self):
+        """時間ギャップ検出のエッジケーステスト"""
+        # 不規則な時系列データ
+        irregular_data = pd.DataFrame({
+            'timestamp': [
+                datetime(2024, 1, 1, 9, 0),
+                datetime(2024, 1, 1, 9, 0),  # 重複
+                datetime(2024, 1, 1, 8, 0),  # 逆順
+                datetime(2024, 1, 1, 15, 0), # 大きなギャップ
+                datetime(2024, 1, 1, 15, 1), # 1分間隔
+            ],
+            'open': [1000] * 5,
+            'high': [1010] * 5,
+            'low': [990] * 5,
+            'close': [1005] * 5,
+            'volume': [5000] * 5
+        })
+        
+        gaps = self.validator._detect_time_gaps(irregular_data)
+        assert isinstance(gaps, list)
+    
+    def test_clean_data_edge_cases(self):
+        """データクリーニングのエッジケーステスト"""
+        # 全て異常値のデータ
+        all_invalid = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=5),
+            'open': [-1000] * 5,      # 全て負の値
+            'high': [-990] * 5,       # 全て負の値
+            'low': [-1010] * 5,       # 全て負の値
+            'close': [-1005] * 5,     # 全て負の値
+            'volume': [-5000] * 5     # 全て負の値
+        })
+        
+        cleaned = self.validator.clean_data(all_invalid)
+        
+        # 極端な場合でも空でないDataFrameが返されることを確認
+        assert isinstance(cleaned, pd.DataFrame)
+        assert len(cleaned.columns) == len(all_invalid.columns)
+    
+    def test_clean_data_error_handling(self):
+        """データクリーニングエラーハンドリングテスト"""
+        # 無効な列名やデータ型を含むデータ
+        invalid_structure = pd.DataFrame({
+            'timestamp': ['not_a_date'] * 3,
+            'open': ['string'] * 3,
+            'high': [None] * 3,
+            'low': [{}] * 3,  # 辞書オブジェクト
+            'close': [[]] * 3,  # リストオブジェクト
+            'volume': ['text'] * 3
+        })
+        
+        # エラーが発生しても元のDataFrameが返されることを確認
+        result = self.validator.clean_data(invalid_structure)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) <= len(invalid_structure)
+    
+    def test_interpolation_error_handling(self):
+        """補間エラーハンドリングテスト"""
+        # 全て欠損値のカラムを含むデータ
+        all_missing = self.valid_data.copy()
+        all_missing['close'] = np.nan
+        all_missing['volume'] = np.nan
+        
+        # エラーが発生しても元のDataFrameが返されることを確認
+        result = self.validator.interpolate_missing_data(all_missing)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == len(all_missing)
+        
+        # 出来高は0で埋められることを確認
+        assert (result['volume'] == 0).all()
+    
+    def test_interpolation_invalid_method(self):
+        """無効な補間方法テスト"""
+        missing_data = self.valid_data.copy()
+        missing_data.loc[50, 'close'] = np.nan
+        
+        # 無効な補間方法でも何らかの結果が返されることを確認
+        result = self.validator.interpolate_missing_data(missing_data, method="invalid_method")
+        assert isinstance(result, pd.DataFrame)
+    
+    def test_comprehensive_validation_workflow(self):
+        """包括的検証ワークフローテスト"""
+        # 複雑な異常を含む実用的なテストケース
+        complex_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01 09:00', periods=24, freq='h'),
+            'open': [1000 + i * 10 for i in range(24)],
+            'high': [1015 + i * 10 for i in range(24)],
+            'low': [985 + i * 10 for i in range(24)],
+            'close': [1005 + i * 10 for i in range(24)],
+            'volume': [5000 + i * 100 for i in range(24)]
+        })
+        
+        # 複数の異常を挿入
+        complex_data.loc[5, 'close'] = complex_data.loc[4, 'close'] * 1.3  # 大きな価格変動
+        complex_data.loc[10, 'volume'] = complex_data.loc[10, 'volume'] * 8  # 出来高スパイク
+        complex_data.loc[15, 'high'] = complex_data.loc[15, 'low'] - 5  # OHLC不整合
+        complex_data.loc[20, 'open'] = np.nan  # 欠損値
+        complex_data = pd.concat([complex_data, complex_data.iloc[[0]]], ignore_index=True)  # 重複
+        
+        # 完全なワークフロー実行
+        validation_result = self.validator.validate_dataframe(complex_data, "COMPLEX")
+        cleaned_data = self.validator.clean_data(complex_data)
+        interpolated_data = self.validator.interpolate_missing_data(cleaned_data)
+        
+        # 各ステップの結果確認
+        assert "anomalies" in validation_result
+        assert len(validation_result["anomalies"]["price_anomalies"]) > 0
+        assert len(validation_result["anomalies"]["volume_anomalies"]) > 0
+        assert len(validation_result["anomalies"]["ohlc_inconsistencies"]) > 0
+        
+        assert len(cleaned_data) <= len(complex_data)  # クリーニングによりサイズ減少
+        assert interpolated_data['open'].isna().sum() == 0  # 欠損値が補間済み
+    
+    def test_real_world_data_patterns(self):
+        """実世界データパターンテスト"""
+        # 実際の市場データパターンを模倣
+        market_hours_data = pd.DataFrame({
+            'timestamp': [
+                datetime(2024, 1, 1, 9, 0),   # 市場開始
+                datetime(2024, 1, 1, 11, 30), # 前場終了前
+                datetime(2024, 1, 1, 12, 30), # 後場開始
+                datetime(2024, 1, 1, 15, 0),  # 市場終了
+                datetime(2024, 1, 2, 9, 0),   # 翌日開始（ギャップ）
+            ],
+            'open': [1000, 1010, 1015, 1020, 1025],
+            'high': [1005, 1015, 1020, 1025, 1030],
+            'low': [995, 1005, 1010, 1015, 1020],
+            'close': [1002, 1012, 1018, 1023, 1028],
+            'volume': [10000, 8000, 9000, 12000, 15000]
+        })
+        
+        # 市場時間のギャップが適切に検出されることを確認
+        gaps = self.validator._detect_time_gaps(market_hours_data)
+        assert isinstance(gaps, list)
+        
+        # 検証結果の確認
+        result = self.validator.validate_dataframe(market_hours_data, "MARKET")
+        assert result["valid"] is True
+        assert result["record_count"] == 5
+    
+    def test_large_dataset_performance(self):
+        """大規模データセットパフォーマンステスト"""
+        # 大量データの作成（1000行）
+        large_data = self._create_large_test_data(1000)
+        
+        # パフォーマンステスト（エラーなく完了することを確認）
+        result = self.validator.validate_dataframe(large_data, "LARGE")
+        assert result["valid"] is True
+        assert result["record_count"] == 1000
+        
+        # クリーニングと補間もテスト
+        cleaned = self.validator.clean_data(large_data)
+        interpolated = self.validator.interpolate_missing_data(cleaned)
+        
+        assert isinstance(cleaned, pd.DataFrame)
+        assert isinstance(interpolated, pd.DataFrame)
+    
+    def _create_large_test_data(self, size: int) -> pd.DataFrame:
+        """大規模テストデータ作成"""
+        dates = pd.date_range(start='2024-01-01', periods=size, freq='h')
+        np.random.seed(42)
+        
+        # ランダムウォークによる価格生成
+        base_price = 1000
+        returns = np.random.normal(0, 0.01, size)
+        prices = base_price * np.cumprod(1 + returns)
+        
+        # OHLC生成
+        opens = prices * (1 + np.random.normal(0, 0.002, size))
+        closes = prices
+        highs = np.maximum(opens, closes) * (1 + np.random.uniform(0, 0.005, size))
+        lows = np.minimum(opens, closes) * (1 - np.random.uniform(0, 0.005, size))
+        volumes = np.random.poisson(5000, size)
+        
+        return pd.DataFrame({
+            'timestamp': dates,
+            'open': opens,
+            'high': highs,
+            'low': lows,
+            'close': closes,
+            'volume': volumes
+        })

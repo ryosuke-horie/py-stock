@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
 from src.performance_tracking.improvement_suggestions import (
-    ImprovementSuggestionGenerator, SuggestionCategory, SuggestionPriority, 
+    ImprovementSuggestionEngine, SuggestionCategory, SuggestionPriority, 
     ImprovementSuggestion
 )
 from src.performance_tracking.trade_history_manager import TradeRecord
@@ -64,8 +64,8 @@ class TestImprovementSuggestion:
         assert result["expected_improvement_pct"] == 20.0
 
 
-class TestImprovementSuggestionGenerator:
-    """ImprovementSuggestionGeneratorクラスのテスト"""
+class TestImprovementSuggestionEngine:
+    """ImprovementSuggestionEngineクラスのテスト"""
     
     def setup_method(self):
         """各テストメソッド実行前の初期化"""
@@ -73,7 +73,7 @@ class TestImprovementSuggestionGenerator:
         self.mock_pattern_analyzer = Mock()
         self.mock_tendency_analyzer = Mock()
         
-        self.generator = ImprovementSuggestionGenerator(
+        self.generator = ImprovementSuggestionEngine(
             trade_manager=self.mock_trade_manager,
             pattern_analyzer=self.mock_pattern_analyzer,
             tendency_analyzer=self.mock_tendency_analyzer
@@ -108,7 +108,7 @@ class TestImprovementSuggestionGenerator:
         
         # 損失パターン
         loss_pattern = Mock(spec=TradingPattern)
-        loss_pattern.pattern_type = PatternType.CONSECUTIVE_LOSSES
+        loss_pattern.pattern_type = PatternType.FAILURE
         loss_pattern.frequency = 5
         loss_pattern.avg_impact = -250
         loss_pattern.confidence = 0.85
@@ -117,7 +117,7 @@ class TestImprovementSuggestionGenerator:
         
         # 利益パターン
         profit_pattern = Mock(spec=TradingPattern)
-        profit_pattern.pattern_type = PatternType.WINNING_STREAK
+        profit_pattern.pattern_type = PatternType.SUCCESS
         profit_pattern.frequency = 3
         profit_pattern.avg_impact = 400
         profit_pattern.confidence = 0.9
