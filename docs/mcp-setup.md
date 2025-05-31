@@ -9,7 +9,6 @@ py-stockは**MCP (Model Context Protocol)** を活用してClaude Codeと深く�
 **Model Context Protocol (MCP)** は、AIアシスタントと外部データソース・ツールを接続するためのオープンなプロトコルです。py-stockでは以下のMCPサーバを提供しています：
 
 - **Stock Data Server**: リアルタイム株価データ取得・キャッシュ管理
-- **News Analysis Server**: 銘柄関連ニュース収集・感情分析
 
 ## 前提条件
 
@@ -41,32 +40,6 @@ npm start
 - **clear_cache**: 古いキャッシュ削除
 - **validate_symbol**: 銘柄コード妥当性検証
 
-### News Analysis Server
-
-#### インストール
-```bash
-cd mcp-servers/news-analysis
-npm install
-npm run build
-```
-
-#### 環境変数設定（オプション）
-```bash
-export NEWS_API_KEY="your-newsapi-key"
-```
-
-*NewsAPI キーは [NewsAPI.org](https://newsapi.org/) で無料取得できます。設定しない場合はモックデータで動作します。*
-
-#### 動作確認
-```bash
-npm start
-```
-
-#### 提供機能
-- **collect_stock_news**: 銘柄関連ニュース収集
-- **analyze_sentiment**: テキスト感情分析
-- **comprehensive_news_analysis**: 包括的ニュース分析
-- **market_sentiment_summary**: 市場センチメント要約
 
 ## 2. Claude Code統合設定
 
@@ -82,13 +55,6 @@ Claude Codeの設定ファイル (`claude_desktop_config.json`) に以下を追�
       "args": ["./mcp-servers/stock-data/dist/index.js"],
       "env": {
         "NODE_ENV": "production"
-      }
-    },
-    "news-analysis": {
-      "command": "node", 
-      "args": ["./mcp-servers/news-analysis/dist/index.js"],
-      "env": {
-        "NEWS_API_KEY": "your-newsapi-key"
       }
     }
   }
@@ -138,13 +104,6 @@ Appleの過去1ヶ月の日足データを取得して、トレンドを分析�
 
 `get_multiple_symbols` ツールで効率的に並列取得します。
 
-### ニュース感情分析
-
-```
-Teslaの最近のニュースを収集して、センチメント分析を実行して
-```
-
-`comprehensive_news_analysis` ツールでニュース収集と感情分析を実行します。
 
 ## 4. 高度な利用例
 
@@ -154,7 +113,7 @@ Teslaの最近のニュースを収集して、センチメント分析を実行
 以下の戦略を分析して：
 1. 7203の5分足データを1日分取得
 2. RSI、MACD、ボリンジャーバンドを計算
-3. 最近のニュースセンチメントも考慮
+3. テクニカル指標を総合的に評価
 4. 総合的な投資判断を提示
 ```
 
@@ -165,7 +124,7 @@ Claude Codeが複数のMCPツールを組み合わせて包括的な分析を実
 ```
 私のウォッチリスト銘柄（7203, 9984, AAPL, MSFT, GOOGL）について：
 1. 現在価格とパフォーマンスを確認
-2. 最新のニュースセンチメントを分析
+2. テクニカル指標の状況を分析
 3. 注意すべき銘柄があれば教えて
 ```
 
@@ -241,9 +200,6 @@ NewsAPIキーが設定されているか確認
 cd mcp-servers/stock-data
 npm run dev  # 詳細ログ付きで起動
 
-# News Analysis Server  
-cd mcp-servers/news-analysis
-npm run dev
 ```
 
 #### Claude Code デバッグ

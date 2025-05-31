@@ -4,7 +4,7 @@
 
 仕様:
 - 市場ボラティリティに基づく動的閾値調整
-- 複合条件アラート（テクニカル + ファンダメンタル + ニュース）
+- 複合条件アラート（テクニカル + ファンダメンタル）
 - ノイズフィルタリングによるアラート最適化
 - 優先度に応じた通知管理
 """
@@ -263,8 +263,7 @@ class IntelligentAlertSystem:
                       alert_id: str,
                       market_data: Dict[str, float],
                       technical_data: Dict[str, float],
-                      fundamental_data: Optional[Dict[str, float]] = None,
-                      news_sentiment: Optional[float] = None) -> Optional[Dict[str, Any]]:
+                      fundamental_data: Optional[Dict[str, float]] = None) -> Optional[Dict[str, Any]]:
         """
         アラート条件を評価
         
@@ -278,8 +277,6 @@ class IntelligentAlertSystem:
             テクニカル指標データ
         fundamental_data : Dict[str, float]
             ファンダメンタルデータ
-        news_sentiment : float
-            ニュースセンチメント（-1.0 to 1.0）
             
         Returns:
         --------
@@ -297,8 +294,6 @@ class IntelligentAlertSystem:
         all_data = {**market_data, **technical_data}
         if fundamental_data:
             all_data.update(fundamental_data)
-        if news_sentiment is not None:
-            all_data['news_sentiment'] = news_sentiment
         
         # 各条件を評価
         conditions_met = []

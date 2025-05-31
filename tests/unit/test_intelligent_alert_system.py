@@ -341,28 +341,28 @@ class TestIntelligentAlertSystem:
         assert threshold.current_value <= threshold.max_value
         assert threshold.current_value >= threshold.min_value
     
-    def test_composite_alert_with_news_sentiment(self, alert_system):
-        """ニュースセンチメントを含む複合アラートのテスト"""
+    def test_composite_alert_with_fundamental_data(self, alert_system):
+        """ファンダメンタルデータを含む複合アラートのテスト"""
         conditions = [
             {'type': 'price', 'threshold': 100.0, 'operator': 'greater'},
-            {'type': 'news_sentiment', 'threshold': 0.5, 'operator': 'greater'},
+            {'type': 'pe_ratio', 'threshold': 15.0, 'operator': 'less'},
             {'type': 'rsi', 'threshold': 70.0, 'operator': 'greater'}
         ]
         
         alert_id = alert_system.create_composite_alert("TEST", conditions, min_conditions=2)
         
-        # ニュースセンチメントを含む評価
+        # ファンダメンタルデータを含む評価
         market_data = {'price': 110.0}
         technical_data = {'rsi': 75.0}
-        news_sentiment = 0.7  # ポジティブなセンチメント
+        fundamental_data = {'pe_ratio': 12.5}  # 低いPE比
         
         result = alert_system.evaluate_alert(
             alert_id, 
             market_data, 
             technical_data,
-            news_sentiment=news_sentiment
+            fundamental_data
         )
         
         assert result is not None
         assert len(result['conditions_met']) == 3
-        assert any(c['type'] == 'news_sentiment' for c in result['conditions_met'])
+        assert any(c['type'] == 'pe_ratio' for c in result['conditions_met'])
