@@ -109,6 +109,7 @@ class StockDataCollector:
             column_mapping = {
                 'Datetime': 'timestamp',
                 'Date': 'timestamp',
+                'index': 'timestamp',  # reset_index()で作られるカラム
                 'Open': 'open',
                 'High': 'high',
                 'Low': 'low',
