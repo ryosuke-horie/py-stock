@@ -479,7 +479,8 @@ class TestDataValidator:
             'volume': [5000 + i * 100 for i in range(24)]
         })
         
-        # 複数の異常を挿入
+        # 複数の異常を挿入（FutureWarning を避けるため明示的に型変換）
+        complex_data = complex_data.astype({'close': 'float64', 'high': 'float64', 'open': 'float64'})
         complex_data.loc[5, 'close'] = complex_data.loc[4, 'close'] * 1.3  # 大きな価格変動
         complex_data.loc[10, 'volume'] = complex_data.loc[10, 'volume'] * 8  # 出来高スパイク
         complex_data.loc[15, 'high'] = complex_data.loc[15, 'low'] - 5  # OHLC不整合

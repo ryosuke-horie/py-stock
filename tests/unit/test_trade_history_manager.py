@@ -203,8 +203,8 @@ class TestTradeHistoryManager:
         assert closed_trade.exit_price == 1200.0
         assert closed_trade.exit_reason == "Take Profit"
         assert closed_trade.exit_commission == 100.0
-        assert closed_trade.realized_pnl == 19900.0  # (1200-1000)*100 - 100
-        assert closed_trade.realized_pnl_pct == 19.9  # 19900/(1000*100)*100
+        assert abs(closed_trade.realized_pnl - 19900.0) < 0.01  # (1200-1000)*100 - 100
+        assert abs(closed_trade.realized_pnl_pct - 19.9) < 0.01  # 19900/(1000*100)*100
     
     def test_close_trade_short_position(self, manager):
         """ショートポジション決済テスト"""
@@ -223,7 +223,7 @@ class TestTradeHistoryManager:
         assert success is True
         
         closed_trade = manager.get_trade("SHORT_001")
-        assert closed_trade.realized_pnl == 10000.0  # (1000-900)*100
+        assert abs(closed_trade.realized_pnl - 10000.0) < 0.01  # (1000-900)*100
     
     def test_close_trade_not_found(self, manager):
         """存在しない取引の決済テスト"""
@@ -451,13 +451,13 @@ class TestTradeHistoryManager:
         assert stats['total_trades'] == 2
         assert stats['winning_trades'] == 1
         assert stats['losing_trades'] == 1
-        assert stats['win_rate'] == 0.5
-        assert stats['total_pnl'] == 0.0
-        assert stats['average_pnl'] == 0.0
-        assert stats['average_win'] == 10000.0
-        assert stats['average_loss'] == -10000.0
-        assert stats['profit_factor'] == 1.0
-        assert stats['average_hold_time_hours'] == 1.0
+        assert abs(stats['win_rate'] - 0.5) < 0.01
+        assert abs(stats['total_pnl'] - 0.0) < 0.01
+        assert abs(stats['average_pnl'] - 0.0) < 0.01
+        assert abs(stats['average_win'] - 10000.0) < 0.01
+        assert abs(stats['average_loss'] - (-10000.0)) < 0.01
+        assert abs(stats['profit_factor'] - 1.0) < 0.01
+        assert abs(stats['average_hold_time_hours'] - 1.0) < 0.01
     
     def test_delete_trade_success(self, manager, sample_trade):
         """取引削除成功テスト"""

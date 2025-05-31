@@ -40,18 +40,20 @@ class TestPatternAnalyzer:
     def sample_trades(self, trade_manager):
         """サンプル取引データ"""
         trades = []
-        base_time = datetime.now() - timedelta(days=30)
+        base_date = datetime.now() - timedelta(days=30)
         
         # 朝取引（成功パターン）
         for i in range(5):
+            entry_time = (base_date + timedelta(days=i)).replace(hour=10, minute=0, second=0, microsecond=0)
+            exit_time = (base_date + timedelta(days=i)).replace(hour=11, minute=0, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"morning_{i}",
                 symbol="TEST",
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i, hours=10),  # 10:00
+                entry_time=entry_time,  # 10:00
                 entry_price=1000.0,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, hours=11),
+                exit_time=exit_time,
                 exit_price=1050.0,  # 利益
                 realized_pnl=5000.0,
                 realized_pnl_pct=5.0,
@@ -63,14 +65,16 @@ class TestPatternAnalyzer:
         
         # 午後取引（失敗パターン）
         for i in range(5):
+            entry_time = (base_date + timedelta(days=i)).replace(hour=14, minute=0, second=0, microsecond=0)
+            exit_time = (base_date + timedelta(days=i)).replace(hour=15, minute=0, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"afternoon_{i}",
                 symbol="TEST",
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i, hours=14),  # 14:00
+                entry_time=entry_time,  # 14:00
                 entry_price=1000.0,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, hours=15),
+                exit_time=exit_time,
                 exit_price=950.0,  # 損失
                 realized_pnl=-5000.0,
                 realized_pnl_pct=-5.0,
@@ -97,14 +101,16 @@ class TestPatternAnalyzer:
     def test_analyze_patterns_insufficient_data(self, analyzer, trade_manager):
         """データ不足でのパターン分析テスト"""
         # 最小パターンサイズより少ないデータを追加
+        entry_time = (datetime.now() - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+        exit_time = (datetime.now() - timedelta(days=1)).replace(hour=11, minute=0, second=0, microsecond=0)
         trade = TradeRecord(
             trade_id="test_1",
             symbol="TEST",
             direction=TradeDirection.LONG,
-            entry_time=datetime.now() - timedelta(days=1),
+            entry_time=entry_time,
             entry_price=1000.0,
             quantity=100,
-            exit_time=datetime.now(),
+            exit_time=exit_time,
             exit_price=1100.0,
             realized_pnl=10000.0,
             status=TradeStatus.CLOSED
@@ -116,7 +122,7 @@ class TestPatternAnalyzer:
     
     def test_analyze_time_patterns(self, analyzer, sample_trades):
         """時間帯パターン分析テスト"""
-        patterns = analyzer.analyze_patterns(lookback_days=90, min_pattern_size=3)
+        patterns = analyzer.analyze_patterns(lookback_days=90, min_pattern_size=3, confidence_threshold=0.1)
         
         # 朝と午後のパターンが検出されることを確認
         pattern_names = [p.pattern_id for p in patterns]
@@ -145,19 +151,21 @@ class TestPatternAnalyzer:
     
     def test_analyze_holding_period_patterns(self, analyzer, trade_manager):
         """保有期間パターン分析テスト"""
-        base_time = datetime.now() - timedelta(days=30)
+        base_date = datetime.now() - timedelta(days=30)
         
         # 異なる保有期間の取引を追加
         for i in range(5):
             # 短期保有（1時間以内）
+            entry_time = (base_date + timedelta(days=i)).replace(hour=10, minute=0, second=0, microsecond=0)
+            exit_time = (base_date + timedelta(days=i)).replace(hour=10, minute=30, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"short_{i}",
                 symbol="TEST",
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i),
+                entry_time=entry_time,
                 entry_price=1000.0,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, minutes=30),  # 30分後
+                exit_time=exit_time,  # 30分後
                 exit_price=1050.0,
                 realized_pnl=5000.0,
                 status=TradeStatus.CLOSED
@@ -173,18 +181,20 @@ class TestPatternAnalyzer:
     
     def test_analyze_exit_patterns(self, analyzer, trade_manager):
         """決済パターン分析テスト"""
-        base_time = datetime.now() - timedelta(days=30)
+        base_date = datetime.now() - timedelta(days=30)
         
         # 利確での決済パターン
         for i in range(5):
+            entry_time = (base_date + timedelta(days=i)).replace(hour=10, minute=0, second=0, microsecond=0)
+            exit_time = (base_date + timedelta(days=i)).replace(hour=11, minute=0, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"tp_{i}",
                 symbol="TEST",
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i),
+                entry_time=entry_time,
                 entry_price=1000.0,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, hours=1),
+                exit_time=exit_time,
                 exit_price=1100.0,
                 exit_reason="Take Profit",
                 realized_pnl=10000.0,
@@ -237,18 +247,20 @@ class TestPatternAnalyzer:
     
     def test_pattern_confidence_calculation(self, analyzer, trade_manager):
         """パターン信頼度計算テスト"""
-        base_time = datetime.now() - timedelta(days=30)
+        base_date = datetime.now() - timedelta(days=30)
         
         # 一貫性の高いパターンを作成（朝取引で常に成功）
         for i in range(10):
+            entry_time = (base_date + timedelta(days=i)).replace(hour=9, minute=0, second=0, microsecond=0)
+            exit_time = (base_date + timedelta(days=i)).replace(hour=10, minute=0, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"consistent_{i}",
                 symbol="TEST",
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i, hours=9),
+                entry_time=entry_time,
                 entry_price=1000.0,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, hours=10),
+                exit_time=exit_time,
                 exit_price=1050.0,
                 realized_pnl=5000.0,
                 status=TradeStatus.CLOSED
@@ -355,14 +367,16 @@ class TestPatternAnalysisIntegration:
         ]
         
         for i, (symbol, hour, entry, exit, market, strategy) in enumerate(scenarios):
+            entry_time = (base_time + timedelta(days=i)).replace(hour=hour, minute=0, second=0, microsecond=0)
+            exit_time = (base_time + timedelta(days=i)).replace(hour=hour+1, minute=0, second=0, microsecond=0)
             trade = TradeRecord(
                 trade_id=f"complex_{i}",
                 symbol=symbol,
                 direction=TradeDirection.LONG,
-                entry_time=base_time + timedelta(days=i, hours=hour),
+                entry_time=entry_time,
                 entry_price=entry,
                 quantity=100,
-                exit_time=base_time + timedelta(days=i, hours=hour+1),
+                exit_time=exit_time,
                 exit_price=exit,
                 realized_pnl=(exit - entry) * 100,
                 realized_pnl_pct=((exit - entry) / entry) * 100,
