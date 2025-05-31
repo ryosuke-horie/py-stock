@@ -149,9 +149,87 @@ class TestSignalGenerator:
         
         condition2 = {'indicator': 'rsi', 'operator': '<', 'value': 70}
         assert self.generator._evaluate_condition(condition2, indicators) == False
+    
+    def test_initialization_with_config_file(self):
+        """設定ファイル付きでの初期化テスト"""
+        # 一時的な設定ファイル作成
+        config_data = {
+            "test_rule": {
+                "name": "テストルール",
+                "description": "設定ファイルテスト",
+                "conditions": [
+                    {"indicator": "rsi", "operator": ">", "value": 50}
+                ],
+                "weight": 2.0,
+                "category": "test"
+            }
+        }
         
-        # 指標間比較テスト
-        condition3 = {'indicator': 'ema_9', 'operator': '>', 'compare_to': 'ema_21'}
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            config_file = f.name
+        
+        try:
+            generator = SignalGenerator(self.test_data, config_file=config_file)
+            assert "test_rule" in generator.rules
+        finally:
+            Path(config_file).unlink()  # ファイル削除
+    
+    def test_initialization_with_invalid_config_file(self):
+        """存在しない設定ファイルでの初期化テスト"""
+        # 存在しないファイルパスでも例外が発生しないことを確認
+        generator = SignalGenerator(self.test_data, config_file="nonexistent.json")
+        assert len(generator.rules) > 0  # デフォルトルールは存在
+    
+    def test_initialization_with_small_data(self):
+        """少量データでの初期化テスト（警告出力）"""
+        small_data = self.test_data.head(30)  # 50件未満
+        
+        # 警告が出力されるが正常に初期化される
+        generator = SignalGenerator(small_data)
+        assert len(generator.data) == 30
+    
+    def test_evaluate_condition_with_invalid_indicator(self):
+        """存在しない指標での条件評価テスト"""
+        indicators = {'rsi': 50.0}
+        condition = {'indicator': 'nonexistent', 'operator': '>', 'value': 40}
+        
+        # 存在しない指標は False を返す
+        result = self.generator._evaluate_condition(condition, indicators)
+        assert result is False
+    
+    def test_evaluate_condition_with_invalid_operator(self):
+        """無効な演算子での条件評価テスト"""
+        indicators = {'rsi': 50.0}
+        condition = {'indicator': 'rsi', 'operator': 'invalid_op', 'value': 40}
+        
+        # 無効な演算子は False を返す
+        result = self.generator._evaluate_condition(condition, indicators)
+        assert result is False
+    
+    def test_evaluate_condition_compare_to_missing(self):
+        """compare_to指標が存在しない場合の条件評価テスト"""
+        indicators = {'ema_9': 100.0}
+        condition = {'indicator': 'ema_9', 'operator': '>', 'compare_to': 'ema_21'}
+        
+        # compare_to指標がないとFalseを返す
+        result = self.generator._evaluate_condition(condition, indicators)
+        assert result is False
+    
+    def test_evaluate_condition_equal_operator(self):
+        """等号演算子での条件評価テスト"""
+        indicators = {'near_support': True, 'test_value': 50.0}
+        
+        # ブール値の等価比較
+        condition1 = {'indicator': 'near_support', 'operator': '==', 'value': True}
+        assert self.generator._evaluate_condition(condition1, indicators) is True
+        
+        # 数値の等価比較
+        condition2 = {'indicator': 'test_value', 'operator': '==', 'value': 50.0}
+        assert self.generator._evaluate_condition(condition2, indicators) is True
+        
+        condition3 = {'indicator': 'test_value', 'operator': '==', 'value': 60.0}
+        assert self.generator._evaluate_condition(condition3, indicators) is False
         assert self.generator._evaluate_condition(condition3, indicators) == True
         
         # 等価比較テスト
