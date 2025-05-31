@@ -53,7 +53,7 @@ jobs:
           --cov-report=term-missing \
           --cov-report=json:coverage.json \
           --cov-report=xml:coverage.xml \
-          --cov-fail-under=68 \
+          --cov-fail-under=80 \
           -v
         
     - name: Post coverage comment to PR
