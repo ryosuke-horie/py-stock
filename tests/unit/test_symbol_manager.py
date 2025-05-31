@@ -151,6 +151,17 @@ class TestSymbolManager:
         # AAPLは登録されているのでApple Inc.
         assert info["name"] == "Apple Inc."
     
+    def test_get_symbol_info_us_stock_unknown(self):
+        """未知の米国株の銘柄情報取得テスト"""
+        # line 206のブランチをカバー（市場タイプUSだが未知銘柄）
+        info = self.symbol_manager.get_symbol_info("UNKN")
+        
+        assert info["original"] == "UNKN"
+        assert info["market_type"] == "us"
+        assert info["normalized"] == "UNKN"
+        # 未知銘柄なのでN/A
+        assert info["name"] == "N/A"
+    
     def test_normalize_symbol_japan(self):
         """日本株銘柄コード正規化テスト"""
         # 4桁数字 -> .T付きに正規化
