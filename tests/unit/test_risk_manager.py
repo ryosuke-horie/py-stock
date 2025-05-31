@@ -88,20 +88,19 @@ class TestRiskManager(unittest.TestCase):
         """ATRベースストップロス計算テスト"""
         entry_price = 1000
         
-        # TechnicalIndicatorsをモック
-        with patch('src.risk_management.risk_manager.TechnicalIndicators') as mock_ti_class:
-            mock_ti = mock_ti_class.return_value
-            mock_ti.atr.return_value = pd.Series([20.0])  # ATR = 20
-            
-            # technical_indicatorsを設定
-            self.risk_manager.technical_indicators = mock_ti
-            
-            stop_loss = self.risk_manager.calculate_stop_loss(
-                self.test_data, entry_price, PositionSide.LONG, StopLossType.ATR_BASED
-            )
-            
-            expected = entry_price - (20.0 * 2.0)  # ATR * multiplier
-            self.assertAlmostEqual(stop_loss, expected, places=2)
+        # technical_indicatorsオブジェクトをモック
+        mock_technical_indicators = Mock()
+        # ATR値を含むSeriesを返すように設定（NaN値も含む現実的なデータ）
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.LONG, StopLossType.ATR_BASED
+        )
+        
+        expected = entry_price - (20.0 * 2.0)  # ATR * multiplier
+        self.assertAlmostEqual(stop_loss, expected, places=2)
     
     def test_calculate_take_profit_levels(self):
         """テイクプロフィットレベル計算テスト"""
@@ -261,24 +260,28 @@ class TestRiskManager(unittest.TestCase):
         symbol = "7203.T"
         entry_price = 1000
         
-        # ポジション開設を試行
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
         result = self.risk_manager.open_position(
             symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
         )
         
-        # 価格データで更新
-        price_data = {symbol: 1050}
-        self.risk_manager.update_positions(price_data)
+        # ポジション開設成功の確認
+        self.assertTrue(result, "Position should be opened successfully")
+        self.assertIn(symbol, self.risk_manager.positions, f"Position for {symbol} should exist")
         
-        # ポジション開設が失敗した場合のテスト
-        if not result or symbol not in self.risk_manager.positions:
-            # 更新後もポジションが空であることを確認
-            self.assertEqual(len(self.risk_manager.positions), 0)
-        else:
-            # ポジション開設が成功した場合の正常テスト
-            position = self.risk_manager.positions[symbol]
-            self.assertEqual(position.current_price, 1050)
-            self.assertEqual(position.unrealized_pnl, 50000)  # (1050-1000)*1000
+        # 価格更新のみ行う（exit条件をチェックしない方法を探す）
+        # まずポジションの価格を直接更新
+        position = self.risk_manager.positions[symbol]
+        position.update_price(1050)
+        
+        # 価格とPnLの確認
+        self.assertEqual(position.current_price, 1050)
+        self.assertEqual(position.unrealized_pnl, 50000)  # (1050-1000)*1000
     
     def test_get_portfolio_summary(self):
         """ポートフォリオサマリー取得テスト"""

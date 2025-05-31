@@ -28,6 +28,7 @@ from dashboard.components.watchlist import WatchlistComponent
 from dashboard.components.charts import ChartComponent
 from dashboard.components.signals import SignalComponent
 from dashboard.components.alerts import AlertComponent
+from dashboard.components.intelligent_alerts import IntelligentAlertComponent
 from dashboard.components.backtest import BacktestComponent
 from dashboard.components.market_environment import render_market_environment_tab
 from dashboard.components.news_sentiment import render_news_sentiment_analysis
@@ -393,8 +394,19 @@ class StockDashboard:
         """アラートページ表示"""
         st.header("🚨 アラート管理")
         
-        alert_component = AlertComponent()
-        alert_component.display()
+        # インテリジェントアラートと従来アラートをタブで切り替え
+        alert_mode = st.radio(
+            "アラートモード",
+            ["インテリジェントアラート（推奨）", "従来のアラート"],
+            horizontal=True
+        )
+        
+        if alert_mode == "インテリジェントアラート（推奨）":
+            intelligent_alert_component = IntelligentAlertComponent()
+            intelligent_alert_component.display()
+        else:
+            alert_component = AlertComponent()
+            alert_component.display()
     
     def show_backtest(self):
         """バックテストページ表示"""
