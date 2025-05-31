@@ -480,5 +480,243 @@ class TestIntegratedAnalyzer:
         assert summary['best_quality'] is None
 
 
+class TestIntegratedAnalyzerErrorHandling:
+    """IntegratedAnalyzerのエラーハンドリングのテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのフィクスチャ"""
+        return IntegratedAnalyzer()
+    
+    def test_perform_fundamental_analysis_partial_errors(self, analyzer):
+        """ファンダメンタル分析の部分的エラーテスト"""
+        
+        with patch.object(analyzer.fundamental_analyzer, 'get_financial_metrics') as mock_metrics, \
+             patch.object(analyzer.fundamental_analyzer, 'analyze_growth_trend') as mock_growth, \
+             patch.object(analyzer.fundamental_analyzer, 'calculate_health_score') as mock_health:
+            
+            # 一部のメソッドでエラーを発生させる
+            mock_metrics.return_value = Mock()
+            mock_growth.side_effect = Exception("Growth analysis error")
+            mock_health.return_value = Mock()
+            
+            # テスト実行
+            result = analyzer._perform_fundamental_analysis("TEST", False, None)
+            
+            # 検証
+            assert result['status'] == 'error'
+            assert 'Growth analysis error' in result['error_message']
+            assert result['metrics'] is None
+            assert result['growth_trend'] is None
+    
+    def test_perform_basic_technical_analysis_calculation_error(self, analyzer):
+        """テクニカル分析の計算エラーテスト"""
+        
+        # エラーを引き起こすデータ（不正な値）
+        error_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=30),
+            'close': [None] * 30  # Noneで埋められたデータ
+        })
+        
+        with patch.object(analyzer.data_collector, 'get_stock_data') as mock_data:
+            mock_data.return_value = error_data
+            
+            # テスト実行
+            result = analyzer._perform_basic_technical_analysis("TEST")
+            
+            # 検証（エラー時はデフォルト値のTechnicalAnalysisDataを返す）
+            assert result is not None
+            assert result.trend == "不明"
+            assert result.momentum == "普通"
+            assert result.signal == "中立"
+    
+    def test_generate_investment_story_none_inputs(self, analyzer):
+        """投資ストーリー生成でNone入力のテスト"""
+        
+        # Noneのファンダメンタル結果
+        fundamental_results = {
+            'status': 'error',
+            'metrics': None,
+            'growth_trend': None,
+            'health_score': None
+        }
+        
+        with patch.object(analyzer.story_generator, 'generate_comprehensive_report') as mock_report:
+            # ストーリー生成でエラーを起こす
+            mock_report.side_effect = Exception("Story generation error")
+            
+            # テスト実行
+            result = analyzer._generate_investment_story("TEST", fundamental_results, None)
+            
+            # 検証（エラー時はNoneを返す）
+            assert result is None
+    
+    def test_create_analysis_summary_missing_data(self, analyzer):
+        """データ欠損時の分析サマリー作成テスト"""
+        
+        # 不完全なファンダメンタルデータ
+        incomplete_fundamental = {
+            'status': 'error',
+            'health_score': None,
+            'growth_trend': None,
+            'metrics': None
+        }
+        
+        # テスト実行
+        summary = analyzer._create_analysis_summary(
+            "TEST", incomplete_fundamental, None, None
+        )
+        
+        # 検証
+        assert summary['overall_score'] < 50  # 低スコア
+        assert summary['recommendation'] in ["データ不足により判断不可", "売り検討", "保有・様子見"]
+        assert len(summary['key_concerns']) > 0
+    
+    @patch('src.technical_analysis.integrated_analysis.IntegratedAnalyzer.generate_complete_analysis')
+    def test_generate_comparison_report_mixed_results(self, mock_analysis, analyzer):
+        """比較レポート生成で一部エラーのテスト"""
+        
+        # 一部成功、一部エラーの結果
+        mock_analysis.side_effect = [
+            {
+                'symbol': 'SYMBOL1',
+                'summary': {'overall_score': 80, 'recommendation': '買い推奨'}
+            },
+            {
+                'symbol': 'SYMBOL2',
+                'status': 'error',
+                'error_message': 'Analysis failed'
+            }
+        ]
+        
+        # テスト実行
+        result = analyzer.generate_comparison_report(['SYMBOL1', 'SYMBOL2'])
+        
+        # 検証
+        assert result['comparison_type'] == 'multi_symbol'
+        assert len(result['individual_analyses']) == 2
+        assert result['individual_analyses']['SYMBOL2']['status'] == 'error'
+
+
+class TestIntegratedAnalyzerEdgeCases:
+    """IntegratedAnalyzerのエッジケースのテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのフィクスチャ"""
+        return IntegratedAnalyzer()
+    
+    def test_perform_basic_technical_analysis_insufficient_data(self, analyzer):
+        """データ不足時のテクニカル分析テスト"""
+        
+        # 20日未満のデータ（high、lowカラムも含む）
+        short_data = pd.DataFrame({
+            'timestamp': pd.date_range(start='2024-01-01', periods=10),
+            'close': [100 + i for i in range(10)],
+            'high': [105 + i for i in range(10)],
+            'low': [95 + i for i in range(10)]
+        })
+        
+        with patch.object(analyzer.data_collector, 'get_stock_data') as mock_data:
+            mock_data.return_value = short_data
+            
+            # テスト実行
+            result = analyzer._perform_basic_technical_analysis("TEST")
+            
+            # 検証
+            assert result is not None
+            assert result.trend == "横ばい"  # データ不足時は横ばい
+    
+    def test_create_analysis_summary_extreme_values(self, analyzer):
+        """極端な値での分析サマリー作成テスト"""
+        
+        # 非常に高いスコアのファンダメンタル結果
+        extreme_fundamental = {
+            'status': 'success',
+            'health_score': HealthScoreResult(
+                symbol="TEST",
+                total_score=100.0,
+                score_breakdown={},
+                health_level=HealthScore.EXCELLENT,
+                recommendations=[]
+            ),
+            'growth_trend': GrowthTrend(
+                symbol="TEST",
+                revenue_trend=[],
+                profit_trend=[],
+                years=[],
+                revenue_cagr=0.50  # 50%成長
+            )
+        }
+        
+        technical_data = TechnicalAnalysisData(
+            trend="上昇", momentum="強い", signal="買い"
+        )
+        
+        # テスト実行
+        summary = analyzer._create_analysis_summary(
+            "TEST", extreme_fundamental, technical_data, None
+        )
+        
+        # 検証
+        assert summary['overall_score'] <= 100  # 100を超えない
+        assert summary['recommendation'] == "買い推奨"
+    
+    def test_create_comparison_summary_single_symbol(self, analyzer):
+        """単一銘柄での比較サマリー作成テスト"""
+        
+        comparison_results = {
+            'SINGLE': {
+                'summary': {
+                    'overall_score': 75,
+                    'recommendation': '保有'
+                },
+                'fundamental_analysis': {
+                    'health_score': HealthScoreResult(
+                        symbol="SINGLE",
+                        total_score=75,
+                        score_breakdown={},
+                        health_level=HealthScore.GOOD,
+                        recommendations=[]
+                    )
+                }
+            }
+        }
+        
+        # テスト実行
+        summary = analyzer._create_comparison_summary(comparison_results)
+        
+        # 検証
+        assert len(summary['ranking']) == 1
+        assert summary['best_quality'] == 'SINGLE'
+        assert len(summary['recommendations']) > 0
+        assert any('SINGLE' in rec for rec in summary['recommendations'])
+    
+    def test_create_comparison_summary_no_fundamental_data(self, analyzer):
+        """ファンダメンタルデータなしでの比較サマリー作成テスト"""
+        
+        comparison_results = {
+            'NO_FUND': {
+                'summary': {
+                    'overall_score': 50,
+                    'recommendation': '様子見'
+                },
+                'fundamental_analysis': {
+                    'health_score': None,
+                    'growth_trend': None,
+                    'metrics': None
+                }
+            }
+        }
+        
+        # テスト実行
+        summary = analyzer._create_comparison_summary(comparison_results)
+        
+        # 検証
+        assert summary['best_quality'] is None
+        assert summary['best_growth'] is None
+        assert summary['best_value'] is None
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

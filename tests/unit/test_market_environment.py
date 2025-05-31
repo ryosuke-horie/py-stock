@@ -12,6 +12,8 @@ from src.technical_analysis.market_environment import (
     RiskState,
     MarketEnvironment
 )
+from src.data_collector.stock_data_collector import StockDataCollector
+from src.technical_analysis.indicators import TechnicalIndicators
 
 
 class TestMarketEnvironmentAnalyzer:
@@ -292,3 +294,220 @@ class TestMarketEnvironmentAnalyzer:
         assert summary['risk_state'] == RiskState.RISK_ON.value
         assert summary['vix_level'] == 18.5
         assert summary['recommendation'] == "テスト推奨"
+
+
+class TestMarketEnvironmentAnalyzerErrorHandling:
+    """MarketEnvironmentAnalyzerのエラーハンドリングのテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのインスタンスを作成"""
+        return MarketEnvironmentAnalyzer()
+    
+    @patch.object(StockDataCollector, 'get_stock_data')
+    def test_fetch_indices_data_with_exception(self, mock_get_data, analyzer):
+        """インデックスデータ取得でエラーが発生した場合のテスト"""
+        # データ取得でエラーを発生させる
+        mock_get_data.side_effect = Exception("Data fetch error")
+        
+        result = analyzer._fetch_indices_data("5d", "1d")
+        
+        # エラーが発生してもresultは空の辞書が返される
+        assert result == {}
+    
+    def test_calculate_indices_performance_with_error(self, analyzer):
+        """パフォーマンス計算でエラーが発生した場合のテスト"""
+        # 不正なデータ構造
+        indices_data = {
+            'nikkei225': pd.DataFrame({'invalid_column': [1, 2, 3]})
+        }
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # エラーが発生しても結果は返される
+        assert isinstance(result, dict)
+        assert 'nikkei225' not in result  # エラーのあったインデックスは含まれない
+    
+    @patch.object(StockDataCollector, 'get_stock_data')
+    def test_analyze_sector_performance_with_exception(self, mock_get_data, analyzer):
+        """セクターパフォーマンス分析でエラーが発生した場合のテスト"""
+        # データ取得でエラーを発生させる
+        mock_get_data.side_effect = Exception("Sector data error")
+        
+        result = analyzer._analyze_sector_performance("5d", "1d")
+        
+        # エラーが発生しても空の辞書が返される
+        assert result == {}
+    
+    def test_calculate_key_levels_implementation(self, analyzer):
+        """_calculate_key_levelsメソッドのテスト"""
+        indices_perf = {
+            'nikkei225': {'daily': 1.0},
+            'sp500': {'daily': 0.5}
+        }
+        
+        result = analyzer._calculate_key_levels(indices_perf)
+        
+        # nikkei225とsp500のキーレベルが含まれることを確認
+        assert 'nikkei225' in result
+        assert 'sp500' in result
+        assert result['nikkei225']['current'] == "取得中"
+        assert result['nikkei225']['support'] == "計算中"
+        assert result['nikkei225']['resistance'] == "計算中"
+
+
+class TestMarketEnvironmentAnalyzerEdgeCases:
+    """MarketEnvironmentAnalyzerのエッジケースのテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのインスタンスを作成"""
+        return MarketEnvironmentAnalyzer()
+    
+    def test_calculate_indices_performance_empty_data(self, analyzer):
+        """空のデータでパフォーマンス計算のテスト"""
+        indices_data = {
+            'nikkei225': pd.DataFrame()
+        }
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        assert result == {}
+    
+    def test_determine_market_sentiment_edge_values(self, analyzer):
+        """境界値でのセンチメント判定のテスト"""
+        # VIX = 12（境界値）
+        sentiment = analyzer._determine_market_sentiment(12.0, {})
+        assert sentiment == MarketSentiment.EXTREME_GREED
+        
+        # VIX = 20（境界値）
+        sentiment = analyzer._determine_market_sentiment(20.0, {})
+        assert sentiment == MarketSentiment.GREED
+        
+        # VIX = 30（境界値）
+        sentiment = analyzer._determine_market_sentiment(30.0, {})
+        assert sentiment == MarketSentiment.NEUTRAL
+        
+        # VIX = 40（境界値）
+        sentiment = analyzer._determine_market_sentiment(40.0, {})
+        assert sentiment == MarketSentiment.FEAR
+        
+        # VIX = 50（境界値）
+        sentiment = analyzer._determine_market_sentiment(50.0, {})
+        assert sentiment == MarketSentiment.EXTREME_FEAR
+    
+    def test_determine_market_sentiment_with_performance(self, analyzer):
+        """パフォーマンスデータを含むセンチメント判定のテスト"""
+        # 平均パフォーマンスが-2%未満
+        indices_perf = {
+            'nikkei225': {'daily': -3.0},
+            'sp500': {'daily': -2.5}
+        }
+        sentiment = analyzer._determine_market_sentiment(25.0, indices_perf)
+        assert sentiment == MarketSentiment.FEAR
+        
+        # 平均パフォーマンスが+2%超
+        indices_perf = {
+            'nikkei225': {'daily': 2.5},
+            'sp500': {'daily': 3.0}
+        }
+        sentiment = analyzer._determine_market_sentiment(25.0, indices_perf)
+        assert sentiment == MarketSentiment.GREED
+    
+    def test_determine_risk_state_equal_performance(self, analyzer):
+        """グロースとディフェンシブセクターの成績が同等の場合のテスト"""
+        indices_perf = {}
+        vix = 25.0
+        sector_perf = {
+            'technology': 2.0,
+            'financial': 2.0,
+            'healthcare': 2.0,
+            'consumer': 2.0
+        }
+        
+        risk_state = analyzer._determine_risk_state(indices_perf, vix, sector_perf)
+        
+        # パフォーマンスが同等の場合は他の要因で決まる
+        assert risk_state in [RiskState.RISK_ON, RiskState.RISK_OFF, RiskState.NEUTRAL]
+    
+    def test_analyze_market_breadth_no_sectors(self, analyzer):
+        """セクターデータがない場合の市場の幅分析のテスト"""
+        indices_perf = {
+            'nikkei225': {'volatility': 20.0}
+        }
+        sector_perf = {}
+        
+        breadth = analyzer._analyze_market_breadth(indices_perf, sector_perf)
+        
+        # セクターデータがない場合はセクター関連のキーは含まれない
+        assert 'positive_sectors' not in breadth
+        assert 'negative_sectors' not in breadth
+        assert 'advance_decline_ratio' not in breadth
+        # ボラティリティは計算される
+        assert 'avg_volatility' in breadth
+        assert breadth['avg_volatility'] == 20.0
+    
+    def test_generate_recommendation_mixed_signals(self, analyzer):
+        """混在したシグナルでの推奨生成のテスト"""
+        # リスクオンだが恐怖センチメント
+        sentiment = MarketSentiment.FEAR
+        risk_state = RiskState.RISK_ON
+        risk_factors = ["リスク1"]
+        opportunities = ["機会1", "機会2"]
+        
+        recommendation = analyzer._generate_recommendation(
+            sentiment, risk_state, risk_factors, opportunities
+        )
+        
+        # 推奨が生成されることを確認
+        assert len(recommendation) > 0
+        assert isinstance(recommendation, str)
+    
+    def test_calculate_indices_performance_insufficient_data(self, analyzer):
+        """データが不足している場合のパフォーマンス計算のテスト"""
+        indices_data = {
+            'nikkei225': pd.DataFrame({
+                'timestamp': [datetime.now()],
+                'close': [27000.0]
+            })  # 1行のみ
+        }
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # データが不足していても処理が続行される
+        assert 'nikkei225' in result
+        assert 'daily' not in result['nikkei225']  # 1日リターンは計算できない
+    
+    def test_get_current_vix_no_data(self, analyzer):
+        """VIXデータがない場合のテスト"""
+        indices_data = {
+            'nikkei225': pd.DataFrame({'close': [27000.0]})
+        }
+        
+        vix = analyzer._get_current_vix(indices_data)
+        
+        # デフォルト値が返される
+        assert vix == 20.0
+    
+    @patch.object(TechnicalIndicators, 'rsi')
+    def test_calculate_indices_performance_with_rsi_error(self, mock_rsi, analyzer):
+        """RSI計算でエラーが発生した場合のテスト"""
+        mock_rsi.return_value = pd.Series()  # 空のシリーズを返す
+        
+        indices_data = {
+            'nikkei225': pd.DataFrame({
+                'timestamp': pd.date_range(end=datetime.now(), periods=30),
+                'open': np.random.uniform(27000, 28000, 30),
+                'high': np.random.uniform(27500, 28500, 30),
+                'low': np.random.uniform(26500, 27500, 30),
+                'close': np.random.uniform(27000, 28000, 30),
+                'volume': np.random.uniform(1000000, 2000000, 30)
+            })
+        }
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # RSIがなくても他の指標は計算される
+        assert 'nikkei225' in result
+        assert 'daily' in result['nikkei225']
+        assert 'rsi' not in result['nikkei225']
