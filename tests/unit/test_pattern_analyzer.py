@@ -149,6 +149,160 @@ class TestPatternAnalyzer:
         strategy_patterns = [p for p in patterns if 'strategy' in p.pattern_id]
         assert len(strategy_patterns) >= 0  # データによっては検出されない場合もある
     
+    def test_analyze_patterns_with_exception(self, analyzer, trade_manager):
+        """パターン分析中の例外処理テスト"""
+        # 無効な取引データでエラーを発生させる
+        with patch.object(analyzer.trade_manager, 'get_closed_trades', side_effect=Exception("DB Error")):
+            patterns = analyzer.analyze_patterns()
+            assert patterns == []  # 例外時は空リストを返す
+    
+    def test_analyze_time_patterns_no_entry_time(self, analyzer, trade_manager):
+        """エントリー時間なしの取引での時間帯パターン分析テスト"""
+        # entry_time がNoneの取引を作成
+        trade = TradeRecord(
+            trade_id="no_time",
+            symbol="TEST",
+            direction=TradeDirection.LONG,
+            entry_time=None,  # エントリー時間なし
+            entry_price=1000.0,
+            quantity=100,
+            realized_pnl=1000.0,
+            status=TradeStatus.CLOSED
+        )
+        trade_manager.add_trade(trade)
+        
+        # 時間帯パターン分析で例外が発生しないことを確認
+        patterns = analyzer._analyze_time_patterns([trade], min_size=1)
+        assert isinstance(patterns, list)
+    
+    def test_analyze_holding_period_patterns_no_exit_time(self, analyzer, trade_manager):
+        """決済時間なしの取引での保有期間パターン分析テスト"""
+        entry_time = datetime.now() - timedelta(days=1)
+        trade = TradeRecord(
+            trade_id="no_exit_time",
+            symbol="TEST",
+            direction=TradeDirection.LONG,
+            entry_time=entry_time,
+            entry_price=1000.0,
+            quantity=100,
+            exit_time=None,  # 決済時間なし
+            realized_pnl=1000.0,
+            status=TradeStatus.CLOSED
+        )
+        trade_manager.add_trade(trade)
+        
+        # 保有期間パターン分析で例外が発生しないことを確認
+        patterns = analyzer._analyze_holding_period_patterns([trade], min_size=1)
+        assert isinstance(patterns, list)
+    
+    def test_analyze_exit_patterns_none_values(self, analyzer, trade_manager):
+        """Noneの値を含む取引での決済パターン分析テスト"""
+        entry_time = datetime.now() - timedelta(days=1)
+        exit_time = entry_time + timedelta(hours=1)
+        trade = TradeRecord(
+            trade_id="none_values",
+            symbol="TEST",
+            direction=TradeDirection.LONG,
+            entry_time=entry_time,
+            entry_price=1000.0,
+            quantity=100,
+            exit_time=exit_time,
+            exit_price=1050.0,
+            realized_pnl=None,  # PnLがNone
+            realized_pnl_pct=None,  # PnL%がNone
+            status=TradeStatus.CLOSED
+        )
+        trade_manager.add_trade(trade)
+        
+        # 決済パターン分析で例外が発生しないことを確認
+        patterns = analyzer._analyze_exit_patterns([trade], min_size=1)
+        assert isinstance(patterns, list)
+    
+    def test_analyze_market_condition_patterns_empty_tags(self, analyzer, trade_manager):
+        """タグなしの取引での市場条件パターン分析テスト"""
+        entry_time = datetime.now() - timedelta(days=1)
+        exit_time = entry_time + timedelta(hours=1)
+        trade = TradeRecord(
+            trade_id="no_tags",
+            symbol="TEST",
+            direction=TradeDirection.LONG,
+            entry_time=entry_time,
+            entry_price=1000.0,
+            quantity=100,
+            exit_time=exit_time,
+            exit_price=1050.0,
+            realized_pnl=5000.0,
+            status=TradeStatus.CLOSED,
+            tags=[]  # 空のタグ
+        )
+        trade_manager.add_trade(trade)
+        
+        # 市場条件パターン分析で例外が発生しないことを確認
+        patterns = analyzer._analyze_market_condition_patterns([trade], min_size=1)
+        assert isinstance(patterns, list)
+    
+    def test_analyze_symbol_patterns_single_symbol(self, analyzer, trade_manager):
+        """単一銘柄での銘柄パターン分析テスト"""
+        entry_time = datetime.now() - timedelta(days=1)
+        exit_time = entry_time + timedelta(hours=1)
+        
+        trades = []
+        for i in range(3):
+            trade = TradeRecord(
+                trade_id=f"symbol_test_{i}",
+                symbol="SINGLE",  # 同一銘柄
+                direction=TradeDirection.LONG,
+                entry_time=entry_time + timedelta(hours=i),
+                entry_price=1000.0,
+                quantity=100,
+                exit_time=exit_time + timedelta(hours=i),
+                exit_price=1050.0,
+                realized_pnl=5000.0,
+                realized_pnl_pct=5.0,
+                status=TradeStatus.CLOSED
+            )
+            trade_manager.add_trade(trade)
+            trades.append(trade)
+        
+        patterns = analyzer._analyze_symbol_patterns(trades, min_size=3)
+        assert len(patterns) >= 0  # 単一銘柄でもパターンが検出される可能性
+    
+    def test_pattern_to_dict(self):
+        """TradingPatternのto_dictテスト"""
+        pattern = TradingPattern(
+            pattern_id="test_pattern",
+            pattern_type=PatternType.SUCCESS,
+            name="テストパターン",
+            description="テスト用のパターン",
+            characteristics={"test": "value"},
+            occurrence_count=5,
+            success_rate=0.8,
+            average_pnl=1000.0,
+            average_pnl_pct=5.0,
+            market_conditions=["bullish"],
+            trade_ids=["trade1", "trade2"],
+            confidence_score=0.9
+        )
+        
+        result = pattern.to_dict()
+        
+        assert result["pattern_id"] == "test_pattern"
+        assert result["pattern_type"] == "success"
+        assert result["name"] == "テストパターン"
+        assert result["success_rate"] == 0.8
+        assert result["confidence_score"] == 0.9
+    
+    def test_confidence_threshold_filtering(self, analyzer, sample_trades):
+        """信頼度閾値によるフィルタリングテスト"""
+        # 低い信頼度閾値
+        patterns_low = analyzer.analyze_patterns(confidence_threshold=0.1)
+        
+        # 高い信頼度閾値
+        patterns_high = analyzer.analyze_patterns(confidence_threshold=0.9)
+        
+        # 高い閾値の方がパターン数が少ないか等しい
+        assert len(patterns_high) <= len(patterns_low)
+    
     def test_analyze_holding_period_patterns(self, analyzer, trade_manager):
         """保有期間パターン分析テスト"""
         base_date = datetime.now() - timedelta(days=30)

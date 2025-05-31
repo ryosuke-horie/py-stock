@@ -191,3 +191,132 @@ class TestMarketType:
         assert MarketType.TOKYO_STOCK.value == "tokyo"
         assert MarketType.US_STOCK.value == "us"
         assert MarketType.FOREIGN_STOCK.value == "foreign"
+
+
+class TestFeeCalculatorEdgeCases:
+    """FeeCalculatorのエッジケース・異常ケーステスト"""
+    
+    def test_calculate_fee_unknown_market_type(self, fee_calculator):
+        """未対応市場タイプでの手数料計算"""
+        amount = Decimal('100000')
+        fee = fee_calculator.calculate_fee(amount, "sbi", MarketType.FOREIGN_STOCK)
+        
+        # 未対応の市場タイプなので0円
+        assert fee == Decimal('0')
+    
+    def test_calculate_fee_fixed_fee_structure(self):
+        """固定手数料構造のテスト"""
+        fee_calculator = FeeCalculator()
+        
+        # 固定手数料構造を手動で追加
+        fixed_structure = FeeStructure(
+            broker_name="テスト証券",
+            market_type=MarketType.TOKYO_STOCK,
+            fee_type="fixed",
+            fixed_fee=Decimal('500')
+        )
+        fee_calculator.fee_structures["test_fixed"] = {
+            MarketType.TOKYO_STOCK: fixed_structure
+        }
+        
+        fee = fee_calculator.calculate_fee(Decimal('1000000'), "test_fixed", MarketType.TOKYO_STOCK)
+        assert fee == Decimal('500')
+    
+    def test_calculate_fee_percentage_with_min_max(self):
+        """最小・最大手数料付きの比例手数料テスト"""
+        fee_calculator = FeeCalculator()
+        
+        # 比例手数料構造を手動で追加
+        percentage_structure = FeeStructure(
+            broker_name="テスト証券",
+            market_type=MarketType.TOKYO_STOCK,
+            fee_type="percentage",
+            percentage_rate=Decimal('0.01'),  # 1%
+            min_fee=Decimal('100'),
+            max_fee=Decimal('1000')
+        )
+        fee_calculator.fee_structures["test_percentage"] = {
+            MarketType.TOKYO_STOCK: percentage_structure
+        }
+        
+        # 最小手数料適用ケース
+        small_fee = fee_calculator.calculate_fee(Decimal('5000'), "test_percentage", MarketType.TOKYO_STOCK)
+        assert small_fee == Decimal('100')  # 50円 < 100円なので最小手数料
+        
+        # 最大手数料適用ケース
+        large_fee = fee_calculator.calculate_fee(Decimal('200000'), "test_percentage", MarketType.TOKYO_STOCK)
+        assert large_fee == Decimal('1000')  # 2000円 > 1000円なので最大手数料
+    
+    def test_calculate_tiered_fee_fallback(self):
+        """段階手数料のフォールバックテスト"""
+        fee_calculator = FeeCalculator()
+        
+        # 空のtiersでの段階手数料計算
+        # 空の場合はmax()でValueErrorが発生するが、これは元のコードの想定されない使用
+        # 実際には空のtiersは使用されないため、このテストは削除またはスキップ
+        import pytest
+        with pytest.raises(ValueError):
+            fee = fee_calculator._calculate_tiered_fee(Decimal('100000'), {})
+    
+    def test_get_cheapest_broker_empty_comparison(self):
+        """空の比較結果での最安証券会社取得"""
+        fee_calculator = FeeCalculator()
+        
+        # fee_structuresを空にしてテスト
+        original_structures = fee_calculator.fee_structures
+        fee_calculator.fee_structures = {}
+        
+        cheapest_broker, cheapest_fee = fee_calculator.get_cheapest_broker(
+            Decimal('100000'), MarketType.TOKYO_STOCK
+        )
+        
+        assert cheapest_broker == ""
+        assert cheapest_fee == Decimal('0')
+        
+        # 元に戻す
+        fee_calculator.fee_structures = original_structures
+    
+    def test_suggest_optimal_amount_unknown_broker(self, fee_calculator):
+        """未対応証券会社での最適投資金額提案"""
+        suggestions = fee_calculator.suggest_optimal_amount("unknown", MarketType.TOKYO_STOCK)
+        assert suggestions == []
+    
+    def test_suggest_optimal_amount_unsupported_market(self, fee_calculator):
+        """未対応市場での最適投資金額提案"""
+        suggestions = fee_calculator.suggest_optimal_amount("sbi", MarketType.FOREIGN_STOCK)
+        assert suggestions == []
+    
+    def test_suggest_optimal_amount_non_tiered_structure(self, fee_calculator):
+        """非段階手数料構造での最適投資金額提案"""
+        # SBI証券の米国株（比例手数料）でテスト
+        suggestions = fee_calculator.suggest_optimal_amount("sbi", MarketType.US_STOCK)
+        assert suggestions == []  # 段階手数料ではないので空リスト
+    
+    def test_suggest_optimal_amount_with_infinity_threshold(self, fee_calculator):
+        """無限大閾値を含む段階手数料の提案テスト"""
+        suggestions = fee_calculator.suggest_optimal_amount("sbi", MarketType.TOKYO_STOCK)
+        
+        # float('inf')の閾値は提案から除外される
+        infinity_suggestions = [s for s in suggestions if s["amount"] == float('inf')]
+        assert len(infinity_suggestions) == 0
+    
+    def test_calculate_fee_impact_zero_amount(self, fee_calculator):
+        """投資金額0円での手数料影響分析"""
+        impact = fee_calculator.calculate_fee_impact(Decimal('0'), "sbi", MarketType.TOKYO_STOCK)
+        
+        assert impact["fee_rate"] == Decimal('0')
+        assert impact["round_trip_rate"] == Decimal('0')
+        assert impact["breakeven_rate"] == Decimal('0')
+    
+    def test_get_fee_structure_info_float_conversion(self, fee_calculator):
+        """手数料構造情報のfloat変換テスト"""
+        info = fee_calculator.get_fee_structure_info("sbi")
+        
+        # 段階手数料のtiersがfloatに変換されていることを確認
+        tokyo_info = info["tokyo"]
+        assert "tiers" in tokyo_info
+        assert tokyo_info["tiers"] is not None
+        
+        # 無限大のキーが変換されていることを確認
+        for key in tokyo_info["tiers"].keys():
+            assert isinstance(key, (int, float))

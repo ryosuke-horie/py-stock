@@ -149,21 +149,92 @@ class TestFundamentalVisualizer:
         assert len(fig.data) > 0
     
     def test_plot_financial_metrics_comparison_with_none_values(self):
-        """None値を含む財務指標比較テスト"""
-        metrics_with_none = FinancialMetrics(
-            symbol="TEST.T",
-            company_name="テスト会社",
-            per=None,
-            pbr=None,
-            roe=0.10,
-            dividend_yield=None,
-            current_ratio=1.5,
-            equity_ratio=0.40
+        """Noneの値を含む財務指標比較グラフテスト"""
+        metrics_list = [
+            FinancialMetrics(
+                symbol="TEST1",
+                company_name="テスト1",
+                per=None,  # None値
+                pbr=1.2,
+                roe=0.15,
+                dividend_yield=None,  # None値
+                current_ratio=1.8,
+                equity_ratio=0.55
+            ),
+            FinancialMetrics(
+                symbol="TEST2",
+                company_name="テスト2",
+                per=15.0,
+                pbr=None,  # None値
+                roe=None,  # None値
+                dividend_yield=0.03,
+                current_ratio=None,  # None値
+                equity_ratio=0.45
+            )
+        ]
+        
+        fig = self.visualizer.plot_financial_metrics_comparison(metrics_list)
+        
+        # None値があってもグラフが作成される
+        assert isinstance(fig, go.Figure)
+    
+    def test_plot_growth_trend_with_exception(self):
+        """成長トレンドグラフ作成中の例外処理テスト"""
+        # 不正なGrowthTrendオブジェクトで例外発生をシミュレート
+        invalid_growth_trend = Mock()
+        invalid_growth_trend.symbol = "TEST"
+        invalid_growth_trend.years = None  # 不正な値
+        
+        with patch('plotly.subplots.make_subplots', side_effect=Exception("Plot error")):
+            fig = self.visualizer.plot_growth_trend(invalid_growth_trend)
+            
+        # 例外時は空のFigureを返す
+        assert isinstance(fig, go.Figure)
+        assert len(fig.data) == 0
+    
+    def test_plot_financial_metrics_comparison_with_exception(self):
+        """財務指標比較グラフ作成中の例外処理テスト"""
+        with patch('plotly.subplots.make_subplots', side_effect=Exception("Plot error")):
+            fig = self.visualizer.plot_financial_metrics_comparison([self.sample_metrics])
+            
+        # 例外時は空のFigureを返す
+        assert isinstance(fig, go.Figure)
+        assert len(fig.data) == 0
+    
+    def test_plot_health_score_radar_with_exception(self):
+        """健全性スコアレーダーチャート作成中の例外処理テスト"""
+        with patch('plotly.graph_objects.Figure', side_effect=Exception("Plot error")):
+            fig = self.visualizer.plot_health_score_radar(self.sample_health_score)
+            
+        # 例外時は空のFigureを返す
+        assert isinstance(fig, go.Figure)
+        assert len(fig.data) == 0
+    
+    def test_color_palette_access(self):
+        """カラーパレットアクセステスト"""
+        assert self.visualizer.color_palette['primary'] == '#1f77b4'
+        assert self.visualizer.color_palette['secondary'] == '#ff7f0e'
+        assert self.visualizer.color_palette['success'] == '#2ca02c'
+        assert self.visualizer.color_palette['warning'] == '#d62728'
+        assert self.visualizer.color_palette['info'] == '#9467bd'
+        assert self.visualizer.color_palette['light'] == '#8c564b'
+        assert self.visualizer.color_palette['dark'] == '#e377c2'
+    
+    def test_plot_health_score_radar_empty_breakdown(self):
+        """空のスコア内訳での健全性スコアレーダーチャートテスト"""
+        empty_health_score = HealthScoreResult(
+            symbol="TEST",
+            total_score=50.0,
+            health_level=HealthScore.AVERAGE,
+            score_breakdown={},  # 空の内訳
+            recommendations=[]
         )
         
-        fig = self.visualizer.plot_financial_metrics_comparison([metrics_with_none])
+        fig = self.visualizer.plot_health_score_radar(empty_health_score)
         
+        # 空の内訳でもグラフが作成される（エラーが発生しない）
         assert isinstance(fig, go.Figure)
+    
     
     def test_plot_health_score_radar(self):
         """健全性スコアレーダーチャートテスト"""
