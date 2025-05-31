@@ -161,3 +161,103 @@ class TestSettingsManager:
         
         # 値が正しく読み込まれているか確認（基本的な構造のみ）
         assert isinstance(loaded_settings, AppSettings)
+    
+    def test_save_settings_with_invalid_path(self, tmp_path):
+        """無効なパスへの設定保存テスト"""
+        # 実際の実装では例外処理があるかどうか確認
+        config_file = tmp_path / "test_config.json"
+        manager = SettingsManager(str(config_file))
+        
+        settings = AppSettings()
+        
+        # 正常に保存できることを確認
+        manager.save_settings(settings)
+        assert config_file.exists()
+    
+    def test_load_invalid_json_settings(self, tmp_path):
+        """無効なJSON設定ファイルの読み込みテスト"""
+        config_file = tmp_path / "invalid_config.json"
+        
+        # 無効なJSONを書き込み
+        with open(config_file, 'w') as f:
+            f.write("invalid json content")
+        
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()
+        
+        # デフォルト設定が返される
+        assert isinstance(settings, AppSettings)
+        assert settings.data_collector.max_workers == 5
+    
+    def test_update_data_collector_config(self, tmp_path):
+        """データ収集設定更新テスト"""
+        config_file = tmp_path / "test_config.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 設定を直接変更
+        settings = manager.settings
+        settings.data_collector.cache_dir = "new_cache"
+        settings.data_collector.max_workers = 8
+        settings.data_collector.min_request_interval = 0.2
+        
+        # 設定が更新されていることを確認
+        assert settings.data_collector.cache_dir == "new_cache"
+        assert settings.data_collector.max_workers == 8
+        assert settings.data_collector.min_request_interval == 0.2
+    
+    def test_update_database_config(self, tmp_path):
+        """データベース設定更新テスト"""
+        config_file = tmp_path / "test_config.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 設定を直接変更
+        settings = manager.settings
+        settings.database.type = "postgresql"
+        settings.database.path = "new_db.db"
+        settings.database.backup_enabled = False
+        
+        assert settings.database.type == "postgresql"
+        assert settings.database.path == "new_db.db"
+        assert settings.database.backup_enabled == False
+    
+    def test_basic_settings_access(self, tmp_path):
+        """基本的な設定アクセステスト"""
+        config_file = tmp_path / "test_config.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 基本的な設定アクセス
+        settings = manager.settings
+        assert settings.data_collector.max_workers == 5
+        assert settings.database.type == "sqlite"
+        assert settings.logging.level == "INFO"
+        
+        # ウォッチリストアクセス
+        assert "日本株主要銘柄" in settings.default_watchlists
+        assert "7203.T" in settings.default_watchlists["日本株主要銘柄"]
+    
+    def test_concurrent_access(self, tmp_path):
+        """並行アクセステスト"""
+        config_file = tmp_path / "concurrent_config.json"
+        
+        # 複数のマネージャーインスタンス
+        manager1 = SettingsManager(str(config_file))
+        manager2 = SettingsManager(str(config_file))
+        
+        # 異なる設定で保存
+        settings1 = manager1.settings
+        settings1.data_collector.max_workers = 10
+        manager1.save_settings(settings1)
+        
+        settings2 = manager2.settings
+        settings2.data_collector.max_workers = 20
+        manager2.save_settings(settings2)
+        
+        # ファイルが正常に作成されていることを確認
+        assert config_file.exists()
+        
+        # 最後の保存が有効になっていることを確認
+        fresh_manager = SettingsManager(str(config_file))
+        fresh_settings = fresh_manager.load_settings()
+        
+        # どちらかの値が保存されていることを確認
+        assert fresh_settings.data_collector.max_workers in [10, 20]

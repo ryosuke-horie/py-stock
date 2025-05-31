@@ -185,7 +185,7 @@ class TestTechnicalIndicators:
         valid_indices = ~(bb['bb_upper'].isna() | bb['bb_middle'].isna() | bb['bb_lower'].isna())
         valid_bb = {key: series[valid_indices] for key, series in bb.items()}
         
-        if len(valid_bb) > 0:
+        if len(valid_bb['bb_upper']) > 0:
             assert (valid_bb['bb_upper'] >= valid_bb['bb_middle']).all()
             assert (valid_bb['bb_middle'] >= valid_bb['bb_lower']).all()
         

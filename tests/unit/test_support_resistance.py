@@ -418,17 +418,14 @@ class TestSupportResistanceDetector:
             # 例外が発生した場合も正常
             pass
         
-        # 無効な最小タッチ回数
+        # 最小タッチ回数0でも動作することを確認
         detector = SupportResistanceDetector(self.test_data, min_touches=0)
         levels = detector.detect_support_resistance_levels()
-        # エラーにならないが、有意なレベルは検出されない可能性
+        assert isinstance(levels, list)
         
         # 無効なピボット期間タイプ
-        try:
+        with pytest.raises(ValueError):
             self.detector.calculate_pivot_points('invalid_period')
-        except (ValueError, KeyError):
-            # 期待される例外
-            pass
     
     def test_caching_functionality(self):
         """キャッシュ機能テスト"""

@@ -197,11 +197,11 @@ class RiskManager:
                 
                 if side == PositionSide.LONG:
                     # 直近のサポートレベル
-                    support_level = data['Low'].rolling(20).min().iloc[-1]
+                    support_level = data['low'].rolling(20).min().iloc[-1]
                     return max(support_level, entry_price * (1 - self.risk_params.stop_loss_pct / 100))
                 else:
                     # 直近のレジスタンスレベル
-                    resistance_level = data['High'].rolling(20).max().iloc[-1]
+                    resistance_level = data['high'].rolling(20).max().iloc[-1]
                     return min(resistance_level, entry_price * (1 + self.risk_params.stop_loss_pct / 100))
             
             else:

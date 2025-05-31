@@ -35,12 +35,12 @@ class TestRiskManager(unittest.TestCase):
         prices = 1000 + np.cumsum(np.random.randn(100) * 10)
         
         self.test_data = pd.DataFrame({
+            'timestamp': dates,
             'open': prices + np.random.randn(100) * 5,
             'high': prices + abs(np.random.randn(100) * 10),
             'low': prices - abs(np.random.randn(100) * 10),
             'close': prices,
-            'volume': np.random.randint(1000, 10000, 100),
-            'timestamp': dates
+            'volume': np.random.randint(1000, 10000, 100)
         }, index=dates)
     
     def test_risk_manager_initialization(self):
@@ -334,6 +334,298 @@ class TestRiskManager(unittest.TestCase):
         self.assertEqual(default_params.risk_reward_ratios, [1.0, 1.5, 2.0, 3.0])
         self.assertEqual(default_params.max_positions, 5)
         self.assertEqual(default_params.force_close_time, time(15, 0))
+
+
+    def test_calculate_stop_loss_support_resistance(self):
+        """サポート・レジスタンスベースストップロス計算テスト"""
+        entry_price = 1000
+        
+        # ロングポジション
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.LONG, StopLossType.SUPPORT_RESISTANCE
+        )
+        
+        # サポートレベルまたは固定%のどちらかが適用される
+        assert stop_loss < entry_price
+        assert stop_loss > 0
+        
+        # ショートポジション
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.SHORT, StopLossType.SUPPORT_RESISTANCE
+        )
+        
+        # ショートの場合は上向きまたは固定%が適用される（データによって異なる）
+        assert stop_loss > 0
+    
+    def test_calculate_stop_loss_invalid_type(self):
+        """無効なストップロスタイプテスト"""
+        entry_price = 1000
+        
+        # 無効なタイプを使用
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.LONG, "INVALID_TYPE"
+        )
+        
+        # デフォルト（固定パーセンテージ）が適用される
+        expected = entry_price * (1 - 0.02)
+        self.assertAlmostEqual(stop_loss, expected, places=2)
+    
+    def test_calculate_stop_loss_insufficient_data(self):
+        """データ不足時のストップロス計算テスト"""
+        # 少ないデータ
+        small_data = self.test_data.head(5)
+        entry_price = 1000
+        
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            small_data, entry_price, PositionSide.LONG, StopLossType.SUPPORT_RESISTANCE
+        )
+        
+        # ATRベースにフォールバックされるはず
+        assert stop_loss < entry_price
+    
+    def test_update_trailing_stop_short_position(self):
+        """ショートポジションのトレイリングストップ更新テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        # ショートポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.SHORT, entry_price, self.test_data, quantity=1000
+        )
+        
+        # 価格下落時のトレイリングストップ更新
+        self.risk_manager.update_trailing_stop(symbol, 950)
+        position = self.risk_manager.positions[symbol]
+        
+        expected_trailing = 950 * (1 + 0.015)  # 1.5%上
+        self.assertAlmostEqual(position.trailing_stop, expected_trailing, places=2)
+        
+        # さらに価格が下落
+        self.risk_manager.update_trailing_stop(symbol, 900)
+        position = self.risk_manager.positions[symbol]
+        
+        new_expected_trailing = 900 * (1 + 0.015)
+        self.assertAlmostEqual(position.trailing_stop, new_expected_trailing, places=2)
+        
+        # 価格上昇時（トレイリングストップは更新されない）
+        old_trailing = position.trailing_stop
+        self.risk_manager.update_trailing_stop(symbol, 920)
+        self.assertEqual(position.trailing_stop, old_trailing)
+    
+    def test_update_trailing_stop_nonexistent_position(self):
+        """存在しないポジションのトレイリングストップ更新テスト"""
+        # エラーが発生しないことを確認
+        self.risk_manager.update_trailing_stop("NONEXISTENT.T", 1000)
+        # ポジションが存在しないので何も起こらない
+        self.assertEqual(len(self.risk_manager.positions), 0)
+    
+    def test_check_exit_conditions_trailing_stop(self):
+        """トレイリングストップ条件チェックテスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
+        )
+        
+        # トレイリングストップを設定
+        self.risk_manager.update_trailing_stop(symbol, 1050)
+        position = self.risk_manager.positions[symbol]
+        trailing_stop_price = position.trailing_stop - 1  # トレイリングストップを下回る価格
+        
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, trailing_stop_price)
+        
+        self.assertTrue(exit_condition["should_exit"])
+        self.assertIn("Trailing stop", exit_condition["reason"])
+    
+    def test_check_exit_conditions_nonexistent_position(self):
+        """存在しないポジションの決済条件チェックテスト"""
+        exit_condition = self.risk_manager.check_exit_conditions("NONEXISTENT.T", 1000)
+        
+        self.assertFalse(exit_condition["should_exit"])
+        self.assertEqual(exit_condition["reason"], "No position")
+    
+    def test_open_position_zero_quantity(self):
+        """数量ゼロでのポジション開設テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # 最大ポジション数を0に設定してquantityが0になるようにする
+        self.risk_manager.risk_params.max_positions = 0
+        
+        result = self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=0
+        )
+        
+        self.assertFalse(result)
+        self.assertNotIn(symbol, self.risk_manager.positions)
+    
+    def test_close_position_nonexistent(self):
+        """存在しないポジションの決済テスト"""
+        result = self.risk_manager.close_position("NONEXISTENT.T", 1000, "Test close")
+        
+        self.assertFalse(result)
+    
+    def test_close_position_with_loss(self):
+        """損失ポジションの決済テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        exit_price = 950  # 損失
+        
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        # ポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
+        )
+        
+        initial_capital = self.risk_manager.current_capital
+        
+        # ポジション決済
+        success = self.risk_manager.close_position(symbol, exit_price, "Stop loss")
+        
+        self.assertTrue(success)
+        self.assertNotIn(symbol, self.risk_manager.positions)
+        
+        # 損失が反映されていることを確認
+        self.assertLess(self.risk_manager.current_capital, initial_capital)
+    
+    def test_get_portfolio_summary_with_multiple_positions(self):
+        """複数ポジションでのポートフォリオサマリー取得テスト"""
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        # 複数ポジション開設
+        symbols = ["7203.T", "6758.T"]
+        for symbol in symbols:
+            self.risk_manager.open_position(
+                symbol, PositionSide.LONG, 1000, self.test_data, quantity=500
+            )
+            # 価格更新
+            self.risk_manager.positions[symbol].update_price(1050)
+        
+        summary = self.risk_manager.get_portfolio_summary()
+        
+        self.assertEqual(summary["open_positions"], 2)
+        self.assertEqual(summary["unrealized_pnl"], 50000)  # (1050-1000)*500*2
+        self.assertEqual(len(summary["position_details"]), 2)
+        for symbol in symbols:
+            self.assertIn(symbol, summary["position_details"])
+    
+    def test_calculate_position_size_edge_cases(self):
+        """ポジションサイズ計算のエッジケーステスト"""
+        # ストップロス価格がエントリー価格と同じ場合
+        size = self.risk_manager.calculate_position_size(
+            "7203.T", 1000, 1000, PositionSide.LONG
+        )
+        self.assertEqual(size, 0)
+        
+        # ストップロス価格がエントリー価格より高い（ロング）
+        size = self.risk_manager.calculate_position_size(
+            "7203.T", 1000, 1100, PositionSide.LONG
+        )
+        self.assertEqual(size, 0)
+        
+        # ストップロス価格がエントリー価格より低い（ショート）
+        size = self.risk_manager.calculate_position_size(
+            "7203.T", 1000, 900, PositionSide.SHORT
+        )
+        self.assertEqual(size, 0)
+    
+    def test_daily_pnl_tracking(self):
+        """日次PnL追跡テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        exit_price = 1020
+        
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        # ポジション開設・決済
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
+        )
+        self.risk_manager.close_position(symbol, exit_price, "Profit taking")
+        
+        # 日次PnLが更新されていることを確認
+        self.assertGreater(self.risk_manager.daily_pnl, 0)
+    
+    def test_risk_parameters_validation(self):
+        """リスクパラメータ検証テスト"""
+        # カスタムパラメータでRiskManager作成
+        custom_params = RiskParameters(
+            max_position_size_pct=5.0,
+            max_daily_loss_pct=10.0,
+            stop_loss_pct=3.0,
+            atr_multiplier=3.0,
+            trailing_stop_pct=2.0,
+            risk_reward_ratios=[2.0, 3.0, 4.0],
+            max_positions=10,
+            force_close_time=time(14, 30)
+        )
+        
+        risk_manager = RiskManager(custom_params, initial_capital=500000)
+        
+        self.assertEqual(risk_manager.risk_params.max_position_size_pct, 5.0)
+        self.assertEqual(risk_manager.risk_params.max_daily_loss_pct, 10.0)
+        self.assertEqual(risk_manager.risk_params.stop_loss_pct, 3.0)
+        self.assertEqual(risk_manager.initial_capital, 500000)
+    
+    def test_trade_history_tracking(self):
+        """取引履歴追跡テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        exit_price = 1020
+        
+        # ATR計算用のモックを設定
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 13 + [20.0] * 87, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        initial_history_length = len(self.risk_manager.trade_history)
+        
+        # ポジション開設・決済
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
+        )
+        self.risk_manager.close_position(symbol, exit_price, "Profit taking")
+        
+        # 履歴が追加されていることを確認
+        self.assertEqual(len(self.risk_manager.trade_history), initial_history_length + 2)
+        
+        # 開設記録の確認
+        open_record = self.risk_manager.trade_history[-2]
+        self.assertEqual(open_record["action"], "open")
+        self.assertEqual(open_record["symbol"], symbol)
+        self.assertEqual(open_record["side"], PositionSide.LONG.value)
+        
+        # 決済記録の確認
+        close_record = self.risk_manager.trade_history[-1]
+        self.assertEqual(close_record["action"], "close")
+        self.assertEqual(close_record["symbol"], symbol)
 
 
 if __name__ == '__main__':
