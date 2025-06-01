@@ -14,7 +14,6 @@ from src.technical_analysis.investment_story_generator import (
     InvestmentScenario,
     RiskFactor,
     GlossaryTerm,
-    InvestmentReport,
     TechnicalAnalysisData
 )
 from src.technical_analysis.fundamental_analysis import (
@@ -301,7 +300,7 @@ class TestInvestmentStoryGenerator:
             current_price=1000.0
         )
         
-        assert isinstance(report, InvestmentReport)
+        assert isinstance(report, InvestmentStory)
         assert report.symbol == "TEST"
         assert report.company_name == "Test Company"
         assert report.current_price == 1000.0
@@ -318,7 +317,7 @@ class TestInvestmentStoryGenerator:
             current_price=1000.0
         )
         
-        assert isinstance(report, InvestmentReport)
+        assert isinstance(report, InvestmentStory)
         assert report.symbol == "TEST"
         assert report.current_price == 1000.0
         assert len(report.scenarios) == 3  # デフォルトシナリオが生成される
@@ -327,7 +326,7 @@ class TestInvestmentStoryGenerator:
         """デフォルトレポート作成テスト"""
         report = generator._create_default_report("TEST", "Test Company", 1000.0)
         
-        assert isinstance(report, InvestmentReport)
+        assert isinstance(report, InvestmentStory)
         assert report.symbol == "TEST"
         assert report.company_name == "Test Company"
         assert report.current_price == 1000.0
@@ -404,7 +403,7 @@ class TestDataClasses:
         assert technical.signal == "買い"
     
     def test_investment_report_creation(self):
-        """InvestmentReportデータクラステスト"""
+        """InvestmentStoryデータクラステスト"""
         scenario = InvestmentScenario(
             scenario_type=ScenarioType.NEUTRAL,
             title="テスト",
@@ -422,7 +421,7 @@ class TestDataClasses:
         
         term = GlossaryTerm(term="テスト", definition="テスト")
         
-        report = InvestmentReport(
+        report = InvestmentStory(
             symbol="TEST",
             company_name="Test Company",
             current_price=1000.0,
@@ -481,9 +480,9 @@ class TestInvestmentStoryGeneratorErrorHandling:
             mock_assess.side_effect = Exception("Test error")
             
             # エラー時にデフォルトレポートが返されることを確認
-            report = generator.generate_investment_report("TEST", "Test Company", 1000.0)
+            report = generator.generate_comprehensive_report("TEST", "Test Company", 1000.0)
             
-            assert isinstance(report, InvestmentReport)
+            assert isinstance(report, InvestmentStory)
             assert report.symbol == "TEST"
             assert report.company_name == "Test Company"
             assert report.current_price == 1000.0
@@ -492,7 +491,7 @@ class TestInvestmentStoryGeneratorErrorHandling:
         """デフォルトレポート作成テスト"""
         report = generator._create_default_report("TEST", "Test Company", 1000.0)
         
-        assert isinstance(report, InvestmentReport)
+        assert isinstance(report, InvestmentStory)
         assert report.symbol == "TEST"
         assert report.company_name == "Test Company"
         assert report.current_price == 1000.0
@@ -665,8 +664,8 @@ class TestInvestmentStoryGeneratorAdvancedFeatures:
         # 例外が発生する可能性のある操作でもプログラムが続行される
         try:
             # 不正なデータでレポート生成
-            report = generator.generate_investment_report("", "", -1000.0)
-            assert isinstance(report, InvestmentReport)
+            report = generator.generate_comprehensive_report("", "", -1000.0)
+            assert isinstance(report, InvestmentStory)
         except Exception:
             # 例外が発生してもテストは失敗しない
             pass

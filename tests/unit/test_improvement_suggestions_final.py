@@ -259,7 +259,8 @@ class TestImprovementSuggestionEngineFinalCoverage:
                 priority=SuggestionPriority.HIGH,
                 title="テスト",
                 description="テスト",
-                action_items=["テスト"]
+                action_items=["テスト"],
+                expected_impact="テスト効果"
             )
         ]
         

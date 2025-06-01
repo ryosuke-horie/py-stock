@@ -771,15 +771,15 @@ class TestSupportResistanceAdvancedFeatures:
         summary = detector.comprehensive_analysis()
         
         # 必要なキーが含まれることを確認
-        required_keys = ['levels', 'pivot_points', 'camarilla_pivots', 'breakouts', 'market_condition']
+        required_keys = ['support_resistance_levels', 'pivot_points', 'camarilla_pivots', 'recent_breakouts', 'market_condition']
         for key in required_keys:
             assert key in summary
         
         # 各要素のタイプを確認
-        assert isinstance(summary['levels'], list)
+        assert isinstance(summary['support_resistance_levels'], list)
         assert isinstance(summary['pivot_points'], PivotPoint)
         assert isinstance(summary['camarilla_pivots'], dict)
-        assert isinstance(summary['breakouts'], list)
+        assert isinstance(summary['recent_breakouts'], list)
         assert isinstance(summary['market_condition'], str)
     
     def test_time_based_strength_analysis(self):
@@ -825,8 +825,18 @@ class TestSupportResistanceAdvancedFeatures:
         levels = detector.detect_support_resistance_levels()
         breakouts = detector.detect_breakouts(levels)
         
+        # 最寄りのサポート・レジスタンスを取得
+        current_price = self.test_data['close'].iloc[-1]
+        support_levels = [l for l in levels if l.level_type == 'support' and l.price < current_price]
+        resistance_levels = [l for l in levels if l.level_type == 'resistance' and l.price > current_price]
+        
+        nearest_support = max(support_levels, key=lambda x: x.price) if support_levels else None
+        nearest_resistance = min(resistance_levels, key=lambda x: x.price) if resistance_levels else None
+        
         # プライベートメソッドをテスト
-        recommendations = detector._generate_trading_recommendations(levels, breakouts)
+        recommendations = detector._generate_trading_recommendations(
+            levels, nearest_support, nearest_resistance, breakouts
+        )
         
         assert isinstance(recommendations, list)
         # 推奨事項があれば文字列である
@@ -855,13 +865,14 @@ class TestSupportResistanceAdvancedFeatures:
         """信頼度計算のテスト"""
         detector = SupportResistanceDetector(self.test_data)
         
-        # 仮のクラスターデータを作成
+        # 仮のクラスターデータを作成（indicesキーを追加）
         cluster = {
             'mean_price': 1000.0,
             'touches': 5,
             'total_volume': 50000.0,
             'strength': 0.8,
-            'last_touch_index': 90
+            'last_touch_index': 90,
+            'indices': [10, 20, 30, 40, 50]  # 必須キーを追加
         }
         
         confidence = detector._calculate_confidence(cluster)
@@ -879,20 +890,24 @@ class TestSupportResistanceAdvancedFeatures:
         assert 'lows' in swing_points
         
         # 異なるパラメータでテスト
-        swing_points_custom = detector.find_swing_highs_lows(order=3, strict=True)
+        swing_points_custom = detector.find_swing_highs_lows(window=3, min_periods=15)
         assert isinstance(swing_points_custom, dict)
     
     def test_price_clusters_detection(self):
         """価格クラスター検出のテスト"""
         detector = SupportResistanceDetector(self.test_data)
         
-        # デフォルトパラメータでテスト
-        clusters = detector.find_price_clusters()
+        # テスト用の価格とインデックスデータを作成
+        test_prices = [1000.0, 1002.0, 999.5, 1100.0, 1098.0, 1101.5]
+        test_indices = [10, 15, 20, 50, 55, 60]
+        
+        # プライスクラスター検出テスト
+        clusters = detector.find_price_clusters(test_prices, test_indices)
         
         assert isinstance(clusters, list)
         for cluster in clusters:
-            assert 'mean_price' in cluster
-            assert 'touches' in cluster
+            assert 'average_price' in cluster
+            assert 'touch_count' in cluster
             assert 'total_volume' in cluster
 
 
