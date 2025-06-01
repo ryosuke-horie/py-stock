@@ -1,5 +1,7 @@
 # py-stock
 
+![Coverage](https://img.shields.io/badge/coverage-92.6%25-brightgreen)
+
 株式投資の投資タイミングの見極めをPython x Claude Code x MCPでやってみる試み
 
 ## 🚀 実装状況
@@ -193,6 +195,30 @@ streamlit run dashboard/app.py
 1. **Backtest タブ**で過去データを使った戦略検証
 2. パフォーマンス指標で戦略の有効性を評価
 3. 最適化パラメータの調整
+
+## 📊 テストカバレッジバッジ
+
+このプロジェクトでは、テストカバレッジを示すバッジを自動生成できます。
+
+### カバレッジバッジの更新
+
+```bash
+# カバレッジテストを実行してバッジを更新
+uv run python scripts/update_coverage_badge.py
+```
+
+このコマンドは以下を実行します：
+1. プロジェクト全体のテストカバレッジを測定
+2. カバレッジ率に応じた色のバッジを生成（緑：90%以上、黄緑：80%以上、等）
+3. README.mdのバッジを最新のカバレッジで更新
+4. ローカルSVGバッジを`badges/coverage.svg`に保存
+
+### 利用可能なバッジ形式
+
+- **Shields.io バッジ**: `![Coverage](https://img.shields.io/badge/coverage-92.6%25-brightgreen)`
+- **ローカル SVG**: `![Coverage](badges/coverage.svg)`
+
+バッジは現在の92.6%のカバレッジを示しており、プロジェクトの品質管理に役立ちます。
 
 ## 🔧 コマンドライン使用方法
 
