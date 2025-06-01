@@ -362,5 +362,368 @@ class TestDataClasses:
         assert HealthScore.CRITICAL.value == "危険"
 
 
+class TestFundamentalAnalyzerErrorHandling:
+    """エラーハンドリングと例外処理のテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_ticker_info_exception(self, mock_ticker, analyzer):
+        """銘柄情報取得時の例外処理テスト"""
+        # yfinanceで例外が発生するケース
+        mock_ticker.side_effect = Exception("Network error")
+        
+        result = analyzer._get_ticker_info('INVALID')
+        
+        # 例外時は空辞書を返す
+        assert result == {}
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_data_exception(self, mock_ticker, analyzer):
+        """財務データ取得時の例外処理テスト"""
+        # yfinanceで例外が発生するケース
+        mock_ticker.side_effect = Exception("API error")
+        
+        financials, balance_sheet = analyzer._get_financial_data('INVALID')
+        
+        # 例外時は空のDataFrameを返す
+        assert financials.empty
+        assert balance_sheet.empty
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_ticker_info_cache_hit(self, mock_ticker, analyzer):
+        """キャッシュヒット時のテスト"""
+        # 事前にキャッシュに設定
+        cache_key = "info_TEST"
+        test_data = {"test": "data"}
+        analyzer._cache[cache_key] = (test_data, datetime.now())
+        
+        result = analyzer._get_ticker_info('TEST')
+        
+        # キャッシュから取得されることを確認
+        assert result == test_data
+        # yfinanceが呼ばれないことを確認
+        mock_ticker.assert_not_called()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_data_cache_hit(self, mock_ticker, analyzer):
+        """財務データキャッシュヒット時のテスト"""
+        # 事前にキャッシュに設定
+        cache_key = "financials_TEST"
+        test_financials = pd.DataFrame({"test": [1, 2, 3]})
+        test_balance = pd.DataFrame({"balance": [4, 5, 6]})
+        analyzer._cache[cache_key] = ((test_financials, test_balance), datetime.now())
+        
+        financials, balance_sheet = analyzer._get_financial_data('TEST')
+        
+        # キャッシュから取得されることを確認
+        pd.testing.assert_frame_equal(financials, test_financials)
+        pd.testing.assert_frame_equal(balance_sheet, test_balance)
+        # yfinanceが呼ばれないことを確認
+        mock_ticker.assert_not_called()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_no_info(self, mock_ticker, analyzer):
+        """銘柄情報が取得できない場合のテスト"""
+        # 空の銘柄情報を返すモック
+        mock_instance = Mock()
+        mock_instance.info = {}
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('EMPTY')
+        
+        # 情報がない場合はNoneを返す
+        assert result is None
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_missing_data(self, mock_ticker, analyzer):
+        """一部のデータが欠損している場合のテスト"""
+        # 一部のフィールドのみ含む銘柄情報
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Test Company',
+            'trailingPE': 15.0,
+            # その他のフィールドは欠損
+        }
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('PARTIAL')
+        
+        # 取得できたフィールドのみ設定される
+        assert result is not None
+        assert result.company_name == 'Test Company'
+        assert result.per == 15.0
+        assert result.pbr is None  # 欠損フィールドはNone
+        assert result.roe is None
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_analyze_growth_trend_empty_data(self, mock_ticker, analyzer):
+        """空の財務データでの成長トレンド分析テスト"""
+        # 空のDataFrameを返すモック
+        mock_instance = Mock()
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('EMPTY')
+        
+        # 空データの場合はNoneを返す
+        assert result is None
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_analyze_growth_trend_insufficient_data(self, mock_ticker, analyzer):
+        """データ不足時の成長トレンド分析テスト"""
+        # 1年分のデータのみ
+        dates = [datetime(2024, 12, 31)]
+        data = {dates[0]: [1000000000, 100000000]}
+        insufficient_data = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = insufficient_data
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('INSUFFICIENT')
+        
+        # データ不足でもGrowthTrendオブジェクトが返される
+        assert result is not None
+        assert result.revenue_cagr is None or isinstance(result.revenue_cagr, float)
+
+
+class TestFundamentalAnalyzerEdgeCases:
+    """エッジケースと境界値テスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_zero_values(self, mock_ticker, analyzer):
+        """ゼロ値を含む財務指標のテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Zero Company',
+            'trailingPE': 0,  # ゼロPER
+            'priceToBook': 0,  # ゼロPBR
+            'returnOnEquity': 0,  # ゼロROE
+            'dividendYield': 0,  # 配当なし
+            'currentPrice': 0.01,  # 極小株価
+            'marketCap': 1000
+        }
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('ZERO')
+        
+        assert result is not None
+        assert result.per == 0
+        assert result.pbr == 0
+        assert result.roe == 0
+        assert result.dividend_yield == 0
+        assert result.price == 0.01
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_negative_values(self, mock_ticker, analyzer):
+        """負の値を含む財務指標のテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Negative Company',
+            'trailingPE': -15.0,  # 負のPER（赤字企業）
+            'returnOnEquity': -0.05,  # 負のROE
+            'returnOnAssets': -0.03,  # 負のROA
+            'currentPrice': 50.0,
+            'marketCap': 500000000
+        }
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('NEGATIVE')
+        
+        assert result is not None
+        assert result.per == -15.0
+        assert result.roe == -0.05
+        assert result.roa == -0.03
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_extreme_values(self, mock_ticker, analyzer):
+        """極端な値を含む財務指標のテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Extreme Company',
+            'trailingPE': 1000.0,  # 極端に高いPER
+            'priceToBook': 100.0,  # 極端に高いPBR
+            'returnOnEquity': 2.0,  # 200%ROE
+            'dividendYield': 0.5,  # 50%配当利回り
+            'currentPrice': 10000.0,  # 高株価
+            'marketCap': 1000000000000  # 1兆円企業
+        }
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('EXTREME')
+        
+        assert result is not None
+        assert result.per == 1000.0
+        assert result.pbr == 100.0
+        assert result.roe == 2.0
+        assert result.dividend_yield == 0.5
+        assert result.market_cap == 1000000000000
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_analyze_growth_trend_zero_revenue(self, mock_ticker, analyzer):
+        """売上ゼロ期間を含む成長トレンド分析テスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # 2023年の売上がゼロ
+        data = {
+            dates[0]: [1000000000, 100000000],
+            dates[1]: [0, -50000000],  # 売上ゼロ、赤字
+            dates[2]: [800000000, 70000000]
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('ZERO_REVENUE')
+        
+        # ゼロ値でも適切に処理されることを確認
+        assert result is not None
+        assert isinstance(result.revenue_cagr, (float, type(None)))
+        assert isinstance(result.profit_cagr, (float, type(None)))
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_analyze_growth_trend_mixed_positive_negative(self, mock_ticker, analyzer):
+        """正負混在の財務データテスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # 利益が正負混在
+        data = {
+            dates[0]: [1000000000, 100000000],   # 黒字
+            dates[1]: [900000000, -50000000],    # 赤字
+            dates[2]: [800000000, 80000000]      # 黒字
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('MIXED_DATA')
+        
+        # 正負混在でも適切に処理されることを確認
+        assert result is not None
+        assert isinstance(result.revenue_cagr, (float, type(None)))
+        assert isinstance(result.profit_cagr, (float, type(None)))
+
+
+class TestFundamentalAnalyzerAdvancedFeatures:
+    """高度な機能のテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_get_financial_metrics_comprehensive(self, mock_ticker, analyzer):
+        """包括的な財務指標取得テスト"""
+        # 完全な財務データを模擬
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Comprehensive Test Company Inc.',
+            'trailingPE': 18.5,
+            'priceToBook': 2.1,
+            'returnOnEquity': 0.15,
+            'returnOnAssets': 0.08,
+            'dividendYield': 0.035,
+            'currentPrice': 125.50,
+            'marketCap': 5000000000,
+            'sector': 'Technology',
+            'industry': 'Software',
+            'country': 'Japan'
+        }
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('COMPREHENSIVE')
+        
+        # 全フィールドが正しく設定されることを確認
+        assert result is not None
+        assert result.symbol == 'COMPREHENSIVE'
+        assert result.company_name == 'Comprehensive Test Company Inc.'
+        assert result.per == 18.5
+        assert result.pbr == 2.1
+        assert result.roe == 0.15
+        assert result.roa == 0.08
+        assert result.dividend_yield == 0.035
+        assert result.price == 125.50
+        assert result.market_cap == 5000000000
+        assert isinstance(result.updated_at, datetime)
+    
+    def test_cache_expiration_behavior(self, analyzer):
+        """キャッシュ有効期限の動作テスト"""
+        # 期限切れのキャッシュデータを設定
+        cache_key = "info_EXPIRED"
+        old_time = datetime.now() - timedelta(hours=25)  # 25時間前（期限切れ）
+        test_data = {"expired": "data"}
+        analyzer._cache[cache_key] = (test_data, old_time)
+        
+        # キャッシュ内容確認
+        assert cache_key in analyzer._cache
+        
+        # 期限切れキャッシュは新しいリクエストで更新される
+        with patch('src.technical_analysis.fundamental_analysis.yf.Ticker') as mock_ticker:
+            mock_instance = Mock()
+            mock_instance.info = {"fresh": "data"}
+            mock_ticker.return_value = mock_instance
+            
+            result = analyzer._get_ticker_info('EXPIRED')
+            
+            # 新しいデータが取得されることを確認
+            assert result == {"fresh": "data"}
+            mock_ticker.assert_called_once_with('EXPIRED')
+    
+    def test_multiple_symbols_cache_separation(self, analyzer):
+        """複数銘柄のキャッシュ分離テスト"""
+        # 複数銘柄のキャッシュを設定
+        symbols = ['SYMBOL1', 'SYMBOL2', 'SYMBOL3']
+        
+        for i, symbol in enumerate(symbols):
+            cache_key = f"info_{symbol}"
+            test_data = {f"data_{symbol}": i}
+            analyzer._cache[cache_key] = (test_data, datetime.now())
+        
+        # 各銘柄のキャッシュが独立していることを確認
+        for i, symbol in enumerate(symbols):
+            result = analyzer._get_ticker_info(symbol)
+            assert result == {f"data_{symbol}": i}
+    
+    def test_cache_memory_efficiency(self, analyzer):
+        """キャッシュメモリ効率テスト"""
+        # 大量のキャッシュデータを設定
+        for i in range(100):
+            cache_key = f"info_SYMBOL{i}"
+            test_data = {"data": f"value_{i}"}
+            analyzer._cache[cache_key] = (test_data, datetime.now())
+        
+        # キャッシュサイズが適切であることを確認
+        assert len(analyzer._cache) == 100
+        
+        # 個別のキャッシュアクセスが正常であることを確認
+        result = analyzer._get_ticker_info('SYMBOL50')
+        assert result == {"data": "value_50"}
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
