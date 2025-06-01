@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 
 from src.technical_analysis.investment_story_generator import (
     InvestmentStoryGenerator,
+    InvestmentStory,
     FinancialGlossary,
     ScenarioType,
     RiskLevel,
