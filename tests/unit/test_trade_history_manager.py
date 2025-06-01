@@ -281,9 +281,10 @@ class TestTradeHistoryManager:
                 direction=TradeDirection.LONG,
                 entry_time=datetime(2024, 1, 15 + i, 9, 0),
                 entry_price=1000.0,
-                quantity=100,
-                status=status
+                quantity=100
             )
+            # ステータスを手動で設定
+            trade.status = status
             manager.add_trade(trade)
         
         # 銘柄フィルタ
@@ -353,9 +354,10 @@ class TestTradeHistoryManager:
                 direction=TradeDirection.LONG,
                 entry_time=datetime(2024, 1, 15 + i, 9, 0),
                 entry_price=1000.0,
-                quantity=100,
-                status=TradeStatus.OPEN if i % 2 == 0 else TradeStatus.CLOSED
+                quantity=100
             )
+            # ステータスを手動で設定
+            trade.status = TradeStatus.OPEN if i % 2 == 0 else TradeStatus.CLOSED
             manager.add_trade(trade)
         
         open_trades = manager.get_open_trades()
@@ -372,9 +374,10 @@ class TestTradeHistoryManager:
                 direction=TradeDirection.LONG,
                 entry_time=datetime(2024, 1, 15 + i, 9, 0),
                 entry_price=1000.0,
-                quantity=100,
-                status=TradeStatus.OPEN if i % 2 == 0 else TradeStatus.CLOSED
+                quantity=100
             )
+            # ステータスを手動で設定
+            trade.status = TradeStatus.OPEN if i % 2 == 0 else TradeStatus.CLOSED
             manager.add_trade(trade)
         
         closed_trades = manager.get_closed_trades()
@@ -1134,9 +1137,10 @@ class TestTradeHistoryManagerEdgeCases:
                 entry_time=trade_data["entry_time"],
                 entry_price=1000.0,
                 quantity=100,
-                strategy_name=trade_data["strategy"],
-                status=trade_data["status"]
+                strategy_name=trade_data["strategy"]
             )
+            # ステータスを手動で設定
+            trade.status = trade_data["status"]
             manager.add_trade(trade)
         
         # 複数条件での検索
