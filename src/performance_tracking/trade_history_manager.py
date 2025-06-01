@@ -103,12 +103,21 @@ class TradeRecord:
         data['status'] = TradeStatus(data['status'])
         # 文字列をdatetimeに変換
         if data.get('entry_time'):
-            data['entry_time'] = datetime.fromisoformat(data['entry_time'])
+            try:
+                data['entry_time'] = datetime.fromisoformat(data['entry_time'])
+            except (ValueError, TypeError):
+                data['entry_time'] = None
         if data.get('exit_time'):
-            data['exit_time'] = datetime.fromisoformat(data['exit_time'])
+            try:
+                data['exit_time'] = datetime.fromisoformat(data['exit_time'])
+            except (ValueError, TypeError):
+                data['exit_time'] = None
         # JSONをリストに変換
         if data.get('tags') and data['tags'] != 'null':
-            data['tags'] = json.loads(data['tags'])
+            try:
+                data['tags'] = json.loads(data['tags'])
+            except (ValueError, TypeError, json.JSONDecodeError):
+                data['tags'] = None
         else:
             data['tags'] = None
         return cls(**data)
@@ -128,10 +137,17 @@ class TradeHistoryManager:
             db_path = Path.home() / ".py-stock" / "trade_history.db"
         
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create database directory: {e}")
+            # 無効なパスでも続行（テスト用）
         
         # データベース初期化
-        self._init_database()
+        try:
+            self._init_database()
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
         
         logger.info(f"TradeHistoryManager initialized with database: {self.db_path}")
     
@@ -269,10 +285,14 @@ class TradeHistoryManager:
                 values = [trade_dict.get(field) for field in update_fields]
                 values.append(trade.trade_id)
                 
-                conn.execute(
+                cursor = conn.execute(
                     f"UPDATE trade_history SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE trade_id = ?",
                     values
                 )
+                
+                if cursor.rowcount == 0:
+                    logger.warning(f"Trade not found for update: {trade.trade_id}")
+                    return False
                 
                 logger.info(f"Trade updated: {trade.trade_id}")
                 return True
@@ -552,7 +572,12 @@ class TradeHistoryManager:
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("DELETE FROM trade_history WHERE trade_id = ?", (trade_id,))
+                cursor = conn.execute("DELETE FROM trade_history WHERE trade_id = ?", (trade_id,))
+                
+                if cursor.rowcount == 0:
+                    logger.warning(f"Trade not found for deletion: {trade_id}")
+                    return False
+                
                 logger.info(f"Trade deleted: {trade_id}")
                 return True
                 

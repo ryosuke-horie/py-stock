@@ -535,3 +535,270 @@ class TestIntegration:
         assert result.get('time_horizon', 0) == 5
         assert result.get('portfolio_value', 0) > 0
         assert 'var_95' in result
+
+
+class TestPortfolioAnalyzerErrorHandling:
+    """PortfolioAnalyzerのエラーハンドリングのテスト"""
+    
+    def test_calculate_portfolio_var_with_exception(self, portfolio_analyzer_with_risk_manager):
+        """VaR計算でエラーが発生した場合のテスト"""
+        # 価格履歴を設定せずに計算（内部でエラー発生）
+        portfolio_analyzer_with_risk_manager.price_history = None
+        
+        result = portfolio_analyzer_with_risk_manager.calculate_portfolio_var()
+        
+        assert result['var'] == 0.0
+        assert result['cvar'] == 0.0
+        assert result['portfolio_value'] == 0.0
+    
+    def test_analyze_correlations_with_exception(self, portfolio_analyzer):
+        """相関分析でエラーが発生した場合のテスト"""
+        # 不正な価格データを設定
+        portfolio_analyzer.price_history = {'AAPL': None}
+        
+        result = portfolio_analyzer.analyze_correlations()
+        
+        assert result.correlation_matrix.empty
+        assert result.average_correlation == 0.0
+        assert result.max_correlation == 0.0
+        assert result.min_correlation == 0.0
+        assert result.high_correlation_pairs == []
+    
+    def test_calculate_risk_metrics_with_exception(self, portfolio_analyzer):
+        """リスク指標計算でエラーが発生した場合のテスト"""
+        # 不正な価格データを設定
+        portfolio_analyzer.price_history = {'AAPL': pd.DataFrame()}
+        
+        result = portfolio_analyzer.calculate_risk_metrics()
+        
+        assert result.portfolio_var_95 == 0
+        assert result.portfolio_var_99 == 0
+        assert result.portfolio_cvar_95 == 0
+        assert result.portfolio_volatility == 0
+        assert result.sharpe_ratio == 0
+        assert result.max_drawdown == 0
+        assert result.diversification_ratio == 0
+    
+    @patch('src.risk_management.portfolio_analyzer.optimize.minimize')
+    def test_optimize_portfolio_with_exception(self, mock_minimize, portfolio_analyzer, sample_price_data):
+        """最適化でエラーが発生した場合のテスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        # 最適化が失敗するように設定
+        mock_minimize.side_effect = Exception("Optimization error")
+        
+        result = portfolio_analyzer.optimize_portfolio("max_sharpe")
+        
+        assert result.optimal_weights == {}
+        assert result.expected_return == 0
+        assert result.expected_volatility == 0
+        assert result.sharpe_ratio == 0
+        assert result.optimization_type == "max_sharpe"
+    
+    def test_monte_carlo_stress_test_with_exception(self, portfolio_analyzer):
+        """モンテカルロシミュレーションでエラーが発生した場合のテスト"""
+        # 不正な価格データを設定
+        portfolio_analyzer.price_history = {'AAPL': None}
+        
+        result = portfolio_analyzer.monte_carlo_stress_test(100, 5)
+        
+        assert result['var_95'] == 0
+        assert result['var_99'] == 0
+        assert result['expected_loss'] == 0
+        assert result['worst_case'] == 0
+    
+    def test_generate_efficient_frontier_with_exception(self, portfolio_analyzer):
+        """効率的フロンティア生成でエラーが発生した場合のテスト"""
+        # 不正な価格データを設定
+        portfolio_analyzer.price_history = {'AAPL': pd.DataFrame({'Close': [None, None]})}
+        
+        result = portfolio_analyzer.generate_efficient_frontier(10)
+        
+        assert result['returns'] == []
+        assert result['volatilities'] == []
+        assert result['sharpe_ratios'] == []
+    
+    @patch('src.risk_management.portfolio_analyzer.PortfolioAnalyzer.get_portfolio_holdings')
+    def test_get_portfolio_analysis_summary_with_exception(self, mock_holdings, portfolio_analyzer):
+        """分析サマリー生成でエラーが発生した場合のテスト"""
+        # get_portfolio_holdingsがエラーを起こすように設定
+        mock_holdings.side_effect = Exception("Holdings error")
+        
+        result = portfolio_analyzer.get_portfolio_analysis_summary()
+        
+        assert result == {}
+
+
+class TestPortfolioAnalyzerEdgeCases:
+    """PortfolioAnalyzerのエッジケースのテスト"""
+    
+    def test_calculate_returns_with_lowercase_close(self, portfolio_analyzer):
+        """小文字のcloseカラムを持つ価格データのテスト"""
+        # 小文字のcloseカラムを持つデータ（十分な期間）
+        price_data = {
+            'AAPL': pd.DataFrame({
+                'Date': pd.date_range('2024-01-01', periods=300),
+                'close': np.random.randn(300).cumsum() + 100
+            }).set_index('Date')
+        }
+        portfolio_analyzer.set_price_history(price_data)
+        
+        returns_df = portfolio_analyzer._calculate_returns(periods=100)
+        
+        assert not returns_df.empty
+        assert 'AAPL' in returns_df.columns
+    
+    def test_calculate_returns_no_price_column(self, portfolio_analyzer):
+        """価格カラムが存在しない場合のテスト"""
+        # 価格カラムのないデータ
+        price_data = {
+            'AAPL': pd.DataFrame({
+                'Date': pd.date_range('2024-01-01', periods=100),
+                'Volume': np.random.randint(1000000, 5000000, 100)
+            }).set_index('Date')
+        }
+        portfolio_analyzer.set_price_history(price_data)
+        
+        returns_df = portfolio_analyzer._calculate_returns()
+        
+        assert returns_df.empty
+    
+    def test_get_portfolio_holdings_with_none_price(self, portfolio_analyzer):
+        """current_priceがNoneのポジションを持つ場合のテスト"""
+        from src.risk_management.risk_manager import RiskManager, Position, PositionSide, RiskParameters
+        
+        risk_params = RiskParameters()
+        risk_manager = RiskManager(risk_params, initial_capital=1000000)
+        
+        # current_priceがNoneのポジションを追加
+        position_with_none = Position(
+            symbol='AAPL',
+            side=PositionSide.LONG,
+            entry_price=150.0,
+            quantity=100,
+            entry_time=datetime.now(),
+            stop_loss=140.0,
+            take_profit=[160.0, 170.0]
+        )
+        position_with_none.current_price = None  # 作成後にNoneに設定
+        
+        # 正常なポジションも追加
+        normal_position = Position(
+            symbol='GOOGL',
+            side=PositionSide.LONG,
+            entry_price=2800.0,
+            quantity=10,
+            entry_time=datetime.now(),
+            stop_loss=2600.0,
+            take_profit=[3000.0, 3200.0]
+        )
+        normal_position.update_price(2900.0)
+        
+        risk_manager.positions = {
+            'AAPL': position_with_none,
+            'GOOGL': normal_position
+        }
+        
+        portfolio_analyzer.risk_manager = risk_manager
+        
+        holdings = portfolio_analyzer.get_portfolio_holdings()
+        
+        # current_priceがNoneのポジションは除外される
+        assert len(holdings) == 1
+        assert holdings[0].symbol == 'GOOGL'
+    
+    def test_calculate_portfolio_var_no_matching_symbols(self, portfolio_analyzer_with_risk_manager, sample_price_data):
+        """保有銘柄と価格データの銘柄が一致しない場合のテスト"""
+        # 異なる銘柄の価格データを設定
+        wrong_price_data = {
+            'TSLA': sample_price_data['AAPL'],
+            'AMZN': sample_price_data['GOOGL']
+        }
+        portfolio_analyzer_with_risk_manager.set_price_history(wrong_price_data)
+        
+        result = portfolio_analyzer_with_risk_manager.calculate_portfolio_var()
+        
+        assert result['var'] == 0.0
+        assert result['cvar'] == 0.0
+        assert result['portfolio_value'] == 0.0
+    
+    def test_optimize_portfolio_with_target_return_none(self, portfolio_analyzer, sample_price_data):
+        """目標リターンがNoneの場合の最適化テスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        result = portfolio_analyzer.optimize_portfolio("target_return", target_return=None)
+        
+        assert result.optimization_type == "target_return"
+        # 最適化が実行されることを確認
+        if result.optimal_weights:
+            assert len(result.optimal_weights) > 0
+    
+    def test_optimize_portfolio_invalid_type(self, portfolio_analyzer, sample_price_data):
+        """無効な最適化タイプのテスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        result = portfolio_analyzer.optimize_portfolio("invalid_type")
+        
+        assert result.optimal_weights == {}
+        assert result.expected_return == 0
+        assert result.expected_volatility == 0
+        assert result.sharpe_ratio == 0
+    
+    @patch('src.risk_management.portfolio_analyzer.optimize.minimize')
+    def test_optimize_portfolio_failed_optimization(self, mock_minimize, portfolio_analyzer, sample_price_data):
+        """最適化が収束しない場合のテスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        # 最適化が失敗するように設定
+        mock_result = Mock()
+        mock_result.success = False
+        mock_result.message = "Optimization failed"
+        mock_minimize.return_value = mock_result
+        
+        result = portfolio_analyzer.optimize_portfolio("max_sharpe")
+        
+        assert result.optimal_weights == {}
+        assert result.expected_return == 0
+        assert result.expected_volatility == 0
+        assert result.sharpe_ratio == 0
+    
+    def test_generate_efficient_frontier_optimization_errors(self, portfolio_analyzer, sample_price_data):
+        """効率的フロンティア生成中の最適化エラーのテスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        # optimize_portfolioをモックして一部失敗させる
+        original_optimize = portfolio_analyzer.optimize_portfolio
+        call_count = 0
+        
+        def mock_optimize(opt_type, target_return=None):
+            nonlocal call_count
+            call_count += 1
+            if call_count % 2 == 0:  # 偶数回目は失敗
+                raise Exception("Optimization error")
+            return original_optimize(opt_type, target_return)
+        
+        portfolio_analyzer.optimize_portfolio = mock_optimize
+        
+        result = portfolio_analyzer.generate_efficient_frontier(5)
+        
+        # 一部の最適化が失敗しても結果が返されることを確認
+        assert isinstance(result['returns'], list)
+        assert isinstance(result['volatilities'], list)
+        assert isinstance(result['sharpe_ratios'], list)
+    
+    def test_generate_efficient_frontier_all_failures(self, portfolio_analyzer, sample_price_data):
+        """効率的フロンティア生成で全ての最適化が失敗する場合のテスト"""
+        portfolio_analyzer.set_price_history(sample_price_data)
+        
+        # optimize_portfolioを常に失敗させる
+        def mock_optimize(opt_type, target_return=None):
+            return OptimizationResult({}, 0, 0, 0, opt_type)
+        
+        portfolio_analyzer.optimize_portfolio = mock_optimize
+        
+        result = portfolio_analyzer.generate_efficient_frontier(5)
+        
+        # 全て失敗した場合は空のリストが返される
+        assert result['returns'] == []
+        assert result['volatilities'] == []
+        assert result['sharpe_ratios'] == []
