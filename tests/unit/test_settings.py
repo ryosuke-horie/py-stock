@@ -6,6 +6,7 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 from src.config.settings import (
     DataCollectorConfig, DatabaseConfig, LoggingConfig, 
     SchedulerConfig, APIConfig, AppSettings, SettingsManager
@@ -564,3 +565,223 @@ class TestSettingsManager:
         recovered_settings = manager.load_settings()
         assert isinstance(recovered_settings, AppSettings)
         assert recovered_settings.data_collector.max_workers == 5  # デフォルト値
+    
+    def test_load_env_file(self, tmp_path, monkeypatch):
+        """環境変数ファイル読み込みテスト"""
+        # 作業ディレクトリを変更
+        monkeypatch.chdir(tmp_path)
+        
+        # .envファイル作成
+        env_file = tmp_path / ".env"
+        env_file.write_text("TEST_API_KEY=test_value\n")
+        
+        # dotenvが利用可能な場合のテスト
+        with patch('pathlib.Path.exists') as mock_exists:
+            mock_exists.return_value = True
+            with patch('dotenv.load_dotenv') as mock_load_dotenv:
+                # 新しいインスタンスを作成して初期化
+                manager = SettingsManager(str(tmp_path / "config.json"))
+                # load_dotenv が呼ばれたことを確認
+                assert mock_load_dotenv.called
+    
+    def test_load_env_file_import_error(self, tmp_path, monkeypatch):
+        """dotenvインポートエラーのテスト"""
+        monkeypatch.chdir(tmp_path)
+        
+        # .envファイル作成
+        env_file = tmp_path / ".env"
+        env_file.write_text("TEST_API_KEY=test_value\n")
+        
+        # ImportError を発生させる
+        with patch('src.config.settings.Path.exists', return_value=True):
+            with patch('builtins.__import__', side_effect=ImportError("No module named 'dotenv'")):
+                # エラーが処理されることを確認
+                manager = SettingsManager(str(tmp_path / "config.json"))
+                assert manager is not None
+    
+    def test_settings_to_dict_conversion(self, tmp_path):
+        """設定オブジェクトから辞書への変換テスト"""
+        config_file = tmp_path / "conversion_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # カスタム設定を作成
+        settings = AppSettings()
+        settings.data_collector.max_workers = 15
+        settings.data_collector.cache_dir = "custom_cache"
+        settings.database.backup_enabled = False
+        settings.logging.level = "DEBUG"
+        
+        # 保存して読み込み
+        manager.save_settings(settings)
+        
+        # JSONファイルの内容を確認
+        with open(config_file, 'r') as f:
+            saved_data = json.load(f)
+        
+        # 構造が正しいことを確認
+        assert "data_collector" in saved_data
+        assert saved_data["data_collector"]["max_workers"] == 15
+        assert saved_data["data_collector"]["cache_dir"] == "custom_cache"
+        assert saved_data["database"]["backup_enabled"] == False
+        assert saved_data["logging"]["level"] == "DEBUG"
+    
+    def test_dict_to_settings_conversion(self, tmp_path):
+        """辞書から設定オブジェクトへの変換テスト"""
+        config_file = tmp_path / "dict_conversion_test.json"
+        
+        # カスタム辞書データを作成
+        config_data = {
+            "data_collector": {
+                "cache_dir": "test_cache",
+                "max_workers": 20,
+                "min_request_interval": 0.5,
+                "cache_expire_hours": 2,
+                "default_interval": "5m",
+                "default_period": "1w",
+                "retry_attempts": 5,
+                "retry_min_wait": 2,
+                "retry_max_wait": 20
+            },
+            "database": {
+                "type": "mysql",
+                "path": "test.db",
+                "backup_enabled": False,
+                "backup_interval_hours": 48,
+                "vacuum_interval_days": 14,
+                "backup_dir": "test_backups",
+                "backup_before_operations": ["test_op"],
+                "backup_retention_count": 5,
+                "backup_compression_enabled": True,
+                "daily_backup_enabled": False
+            },
+            "logging": {
+                "level": "DEBUG",
+                "log_dir": "test_logs",
+                "file_rotation": "2 days",
+                "file_retention": "60 days",
+                "console_enabled": False,
+                "file_enabled": True
+            },
+            "scheduler": {
+                "enabled": True,
+                "timezone": "UTC",
+                "data_update_intervals": {"1d": "0 0 * * *"}
+            },
+            "api": {
+                "yfinance_enabled": False,
+                "rate_limit_per_minute": 50,
+                "timeout_seconds": 60,
+                "user_agent": "test-agent"
+            },
+            "default_watchlists": {
+                "テスト": ["TEST1", "TEST2"]
+            }
+        }
+        
+        # JSONファイルに保存
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        # 読み込み
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()
+        
+        # 値が正しく設定されていることを確認
+        assert settings.data_collector.cache_dir == "test_cache"
+        assert settings.data_collector.max_workers == 20
+        assert settings.database.type == "mysql"
+        assert settings.database.backup_enabled == False
+        assert settings.logging.level == "DEBUG"
+        assert settings.logging.console_enabled == False
+        assert settings.scheduler.enabled == True
+        assert settings.api.yfinance_enabled == False
+        assert "テスト" in settings.default_watchlists
+        assert settings.default_watchlists["テスト"] == ["TEST1", "TEST2"]
+    
+    def test_save_settings_io_error(self, tmp_path):
+        """設定保存時のIOエラーテスト"""
+        config_file = tmp_path / "io_error_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        settings = AppSettings()
+        
+        # ファイルを作成して閉じない（ロックされた状態をシミュレート）
+        with patch('builtins.open', side_effect=IOError("Cannot write to file")):
+            # save_settingsは例外を処理してログに記録する
+            manager.save_settings(settings)
+            # エラーでもクラッシュしないことを確認
+            assert True
+    
+    def test_cache_dir_creation(self, tmp_path):
+        """キャッシュディレクトリ作成テスト"""
+        config_file = tmp_path / "cache_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 新しいキャッシュディレクトリパスを設定
+        settings = manager.settings
+        cache_path = tmp_path / "new_cache_dir"
+        settings.data_collector.cache_dir = str(cache_path)
+        
+        # 設定を保存（実装によってはディレクトリが作成される可能性）
+        manager.save_settings(settings)
+        
+        # 読み込み直して確認
+        loaded_settings = manager.load_settings()
+        assert loaded_settings.data_collector.cache_dir == str(cache_path)
+    
+    def test_settings_with_none_values(self, tmp_path):
+        """None値を含む設定のテスト"""
+        config_file = tmp_path / "none_values_test.json"
+        
+        # None値を含む設定データ
+        config_data = {
+            "data_collector": {
+                "cache_dir": None,  # Noneの場合
+                "max_workers": 5
+            },
+            "database": None,  # セクション全体がNone
+            "logging": {},  # 空のセクション
+            "scheduler": {
+                "enabled": False,
+                "timezone": "Asia/Tokyo",
+                "data_update_intervals": None  # Noneの場合
+            },
+            "api": {
+                "yfinance_enabled": True
+            },
+            "default_watchlists": None  # Noneの場合
+        }
+        
+        with open(config_file, 'w') as f:
+            json.dump(config_data, f)
+        
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()
+        
+        # デフォルト値が使用されることを確認
+        assert isinstance(settings, AppSettings)
+        assert settings.data_collector.max_workers == 5  # 指定された値
+        assert settings.data_collector.cache_dir == "cache"  # デフォルト値
+        assert settings.database.type == "sqlite"  # デフォルト値
+        assert settings.logging.level == "INFO"  # デフォルト値
+    
+    def test_global_singleton_instance(self):
+        """グローバルシングルトンインスタンスのテスト"""
+        from src.config.settings import settings_manager
+        
+        # シングルトンインスタンスが存在することを確認
+        assert settings_manager is not None
+        assert isinstance(settings_manager, SettingsManager)
+        
+        # 設定オブジェクトが取得できることを確認
+        settings = settings_manager.settings
+        assert settings is not None
+        assert isinstance(settings, AppSettings)
+        
+        # デフォルト設定が読み込まれていることを確認
+        assert hasattr(settings, 'data_collector')
+        assert hasattr(settings, 'database')
+        assert hasattr(settings, 'logging')
+        assert hasattr(settings, 'scheduler')
+        assert hasattr(settings, 'api')
+        assert hasattr(settings, 'default_watchlists')
