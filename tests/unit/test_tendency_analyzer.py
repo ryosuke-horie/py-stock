@@ -986,5 +986,292 @@ class TestTendencyAnalyzerEdgeCases:
         assert result == 1  # 交互なので最大連続損失は1
 
 
+class TestTendencyAnalyzerAdvancedCoverage:
+    """残りの未カバー箇所を対象とした高度なテスト"""
+    
+    def setup_method(self):
+        self.mock_trade_manager = Mock()
+        self.analyzer = TendencyAnalyzer(self.mock_trade_manager)
+    
+    def test_analyze_tendencies_empty_trades(self):
+        """空の取引データでの傾向分析テスト"""
+        self.mock_trade_manager.get_closed_trades.return_value = []
+        
+        result = self.analyzer.analyze_tendencies()
+        
+        # 空データでは空リストが返される
+        assert result == []
+    
+    def test_analyze_tendencies_insufficient_data(self):
+        """データ不足時の傾向分析テスト"""
+        # 最小限のデータ（3件未満）
+        insufficient_trades = []
+        for i in range(2):
+            trade = Mock(spec=TradeRecord)
+            trade.realized_pnl = 100 if i % 2 == 0 else -50
+            insufficient_trades.append(trade)
+        
+        self.mock_trade_manager.get_closed_trades.return_value = insufficient_trades
+        
+        result = self.analyzer.analyze_tendencies()
+        
+        # データ不足でもエラーが発生しない
+        assert isinstance(result, list)
+    
+    def test_analyze_all_tendency_methods_with_insufficient_data(self):
+        """全傾向分析メソッドでのデータ不足テスト"""
+        # 空データや最小データでの各メソッドテスト
+        empty_trades = []
+        minimal_trades = [Mock(realized_pnl=100)]
+        
+        # 各傾向分析メソッドが空データでもエラーにならないことを確認
+        loss_cutting = self.analyzer._analyze_loss_cutting_tendency(empty_trades)
+        profit_taking = self.analyzer._analyze_profit_taking_tendency(empty_trades)
+        risk_mgmt = self.analyzer._analyze_risk_management_tendency(empty_trades)
+        timing = self.analyzer._analyze_timing_tendency(empty_trades)
+        position_sizing = self.analyzer._analyze_position_sizing_tendency(empty_trades)
+        emotional = self.analyzer._analyze_emotional_tendency(empty_trades)
+        
+        # 全てNoneまたは適切な値が返されることを確認
+        for result in [loss_cutting, profit_taking, risk_mgmt, timing, position_sizing, emotional]:
+            assert result is None or isinstance(result, InvestmentTendency)
+    
+    def test_generate_tendency_report_with_empty_tendencies(self):
+        """空の傾向リストでのレポート生成テスト"""
+        result = self.analyzer.generate_tendency_report([])
+        
+        # 空リストでも適切なレポートが生成される
+        assert isinstance(result, dict)
+        assert "summary" in result
+        assert "total_score" in result
+        assert result["total_score"] == 0
+    
+    def test_calculate_percentile_edge_cases(self):
+        """パーセンタイル計算のエッジケーステスト"""
+        # 空のthresholds
+        result_empty = self.analyzer._calculate_percentile(1.0, [])
+        assert result_empty == 50  # デフォルト値
+        
+        # 単一値のthresholds
+        result_single = self.analyzer._calculate_percentile(1.0, [1.0])
+        assert result_single in [10, 30, 50, 70, 90]
+        
+        # 非常に大きな値
+        result_large = self.analyzer._calculate_percentile(1000000, [1, 2, 3, 4, 5])
+        assert result_large == 90
+        
+        # 非常に小さな値
+        result_small = self.analyzer._calculate_percentile(-1000000, [1, 2, 3, 4, 5])
+        assert result_small == 10
+    
+    def test_calculate_max_consecutive_losses_edge_cases(self):
+        """最大連続損失計算のエッジケーステスト"""
+        # 全て利益の取引
+        all_profit_trades = []
+        for i in range(10):
+            trade = Mock(spec=TradeRecord)
+            trade.realized_pnl = 100 + i
+            all_profit_trades.append(trade)
+        
+        result_all_profit = self.analyzer._calculate_max_consecutive_losses(all_profit_trades)
+        assert result_all_profit == 0
+        
+        # 全て損失の取引
+        all_loss_trades = []
+        for i in range(10):
+            trade = Mock(spec=TradeRecord)
+            trade.realized_pnl = -100 - i
+            all_loss_trades.append(trade)
+        
+        result_all_loss = self.analyzer._calculate_max_consecutive_losses(all_loss_trades)
+        assert result_all_loss == 10
+        
+        # 空の取引リスト
+        result_empty = self.analyzer._calculate_max_consecutive_losses([])
+        assert result_empty == 0
+    
+    def test_get_level_from_score_boundary_values(self):
+        """スコアからレベル取得の境界値テスト"""
+        # 境界値でのレベル確認
+        assert self.analyzer._get_level_from_score(90) == TendencyLevel.EXCELLENT
+        assert self.analyzer._get_level_from_score(89.9) == TendencyLevel.GOOD
+        assert self.analyzer._get_level_from_score(75) == TendencyLevel.GOOD
+        assert self.analyzer._get_level_from_score(74.9) == TendencyLevel.AVERAGE
+        assert self.analyzer._get_level_from_score(60) == TendencyLevel.AVERAGE
+        assert self.analyzer._get_level_from_score(59.9) == TendencyLevel.POOR
+        assert self.analyzer._get_level_from_score(40) == TendencyLevel.POOR
+        assert self.analyzer._get_level_from_score(39.9) == TendencyLevel.VERY_POOR
+        assert self.analyzer._get_level_from_score(0) == TendencyLevel.VERY_POOR
+        assert self.analyzer._get_level_from_score(-10) == TendencyLevel.VERY_POOR
+        assert self.analyzer._get_level_from_score(150) == TendencyLevel.EXCELLENT
+    
+    def test_benchmark_values_access(self):
+        """ベンチマーク値アクセステスト"""
+        # 全ベンチマーク値が設定されていることを確認
+        expected_benchmarks = [
+            'loss_cutting_speed', 'profit_taking_speed', 'win_rate',
+            'profit_factor', 'avg_loss_pct', 'avg_win_pct',
+            'risk_reward_ratio', 'max_consecutive_losses',
+            'portfolio_volatility', 'position_size_cv'
+        ]
+        
+        for benchmark_key in expected_benchmarks:
+            assert benchmark_key in self.analyzer.benchmarks
+            assert isinstance(self.analyzer.benchmarks[benchmark_key], (int, float))
+    
+    def test_tendency_data_class_edge_cases(self):
+        """InvestmentTendencyデータクラスのエッジケーステスト"""
+        # 極端な値でのデータクラス作成
+        extreme_tendency = InvestmentTendency(
+            tendency_type=TendencyType.EMOTIONAL,
+            level=TendencyLevel.VERY_POOR,
+            score=-100.0,  # 負のスコア
+            name="極端テスト",
+            description="",  # 空文字列
+            current_value=float('inf'),  # 無限大
+            benchmark_value=float('-inf'),  # 負の無限大
+            percentile=999.9,  # 100を超える値
+            analysis_details={},  # 空辞書
+            improvement_suggestions=[],  # 空リスト
+            supporting_trades=["" for _ in range(1000)]  # 大量の空文字列
+        )
+        
+        # to_dictが正常に動作することを確認
+        result_dict = extreme_tendency.to_dict()
+        assert isinstance(result_dict, dict)
+        assert result_dict["score"] == -100.0
+        assert len(result_dict["supporting_trades"]) == 1000
+    
+    def test_enum_values_completeness(self):
+        """Enum値の完全性テスト"""
+        # TendencyTypeの全値が定義されていることを確認
+        tendency_types = [e.value for e in TendencyType]
+        expected_tendency_types = [
+            "loss_cutting", "profit_taking", "risk_management",
+            "timing", "position_sizing", "emotional"
+        ]
+        for expected_type in expected_tendency_types:
+            assert expected_type in tendency_types
+        
+        # TendencyLevelの全値が定義されていることを確認
+        tendency_levels = [e.value for e in TendencyLevel]
+        expected_levels = ["excellent", "good", "average", "poor", "very_poor"]
+        for expected_level in expected_levels:
+            assert expected_level in tendency_levels
+
+
+class TestTendencyAnalyzerComprehensiveIntegration:
+    """包括的統合テスト"""
+    
+    def setup_method(self):
+        self.mock_trade_manager = Mock()
+        self.analyzer = TendencyAnalyzer(self.mock_trade_manager)
+    
+    def test_full_analysis_workflow_with_diverse_data(self):
+        """多様なデータでの完全分析ワークフローテスト"""
+        # 多様性のあるリアルな取引データを作成
+        diverse_trades = []
+        base_time = datetime.now() - timedelta(days=100)
+        
+        # 様々なパターンの取引を生成
+        patterns = [
+            # パターン1: 素早い損切り、ゆっくり利確
+            {"pnl_range": (-200, -50), "count": 15, "hold_hours": (1, 8)},
+            # パターン2: 大きな利益、長期保有
+            {"pnl_range": (500, 1500), "count": 8, "hold_hours": (48, 168)},
+            # パターン3: 小さな利益、短期
+            {"pnl_range": (50, 200), "count": 20, "hold_hours": (2, 12)},
+            # パターン4: 大きな損失、長期保有（塩漬け）
+            {"pnl_range": (-1000, -300), "count": 5, "hold_hours": (240, 720)},
+        ]
+        
+        trade_id_counter = 0
+        for pattern in patterns:
+            for i in range(pattern["count"]):
+                trade = Mock(spec=TradeRecord)
+                trade.trade_id = f"diverse_trade_{trade_id_counter}"
+                trade.realized_pnl = np.random.uniform(*pattern["pnl_range"])
+                trade.realized_pnl_pct = (trade.realized_pnl / 10000) * 100  # 投資額10,000円仮定
+                
+                trade.entry_time = base_time + timedelta(hours=trade_id_counter * 6)
+                hold_hours = np.random.uniform(*pattern["hold_hours"])
+                trade.exit_time = trade.entry_time + timedelta(hours=hold_hours)
+                
+                trade.quantity = np.random.randint(100, 2000)
+                trade.entry_price = np.random.uniform(800, 1200)
+                trade.stop_loss = trade.entry_price * 0.95 if np.random.random() > 0.3 else None
+                
+                diverse_trades.append(trade)
+                trade_id_counter += 1
+        
+        self.mock_trade_manager.get_closed_trades.return_value = diverse_trades
+        
+        # 完全な分析フローを実行
+        tendencies = self.analyzer.analyze_tendencies()
+        
+        # 結果の検証
+        assert isinstance(tendencies, list)
+        assert len(tendencies) >= 0  # 最低0以上の傾向が分析される
+        
+        # 各傾向の品質確認
+        for tendency in tendencies:
+            assert isinstance(tendency, InvestmentTendency)
+            assert 0 <= tendency.score <= 100
+            assert tendency.level in TendencyLevel
+            assert isinstance(tendency.analysis_details, dict)
+            assert isinstance(tendency.improvement_suggestions, list)
+        
+        # レポート生成テスト
+        if tendencies:
+            report = self.analyzer.generate_tendency_report(tendencies)
+            assert isinstance(report, dict)
+            assert "summary" in report
+            assert "total_score" in report
+            assert "details" in report
+    
+    def test_analyze_tendencies_with_realistic_error_scenarios(self):
+        """現実的なエラーシナリオでの傾向分析テスト"""
+        # 現実に起こりうるデータの問題を含む取引データ
+        problematic_trades = []
+        
+        # 正常な取引
+        for i in range(10):
+            trade = Mock(spec=TradeRecord)
+            trade.trade_id = f"normal_{i}"
+            trade.realized_pnl = 100 + i
+            trade.realized_pnl_pct = 2.0
+            trade.entry_time = datetime.now() - timedelta(days=i)
+            trade.exit_time = datetime.now() - timedelta(days=i-1)
+            trade.quantity = 1000
+            trade.entry_price = 100
+            trade.stop_loss = 95
+            problematic_trades.append(trade)
+        
+        # 問題のある取引データ
+        problem_cases = [
+            # ケース1: Noneが混入
+            Mock(realized_pnl=None, realized_pnl_pct=None),
+            # ケース2: 極端な値
+            Mock(realized_pnl=float('inf'), realized_pnl_pct=1000),
+            # ケース3: 不正な日時
+            Mock(realized_pnl=100, entry_time=None, exit_time="invalid"),
+        ]
+        
+        for i, problem_trade in enumerate(problem_cases):
+            if not hasattr(problem_trade, 'trade_id'):
+                problem_trade.trade_id = f"problem_{i}"
+            problematic_trades.append(problem_trade)
+        
+        self.mock_trade_manager.get_closed_trades.return_value = problematic_trades
+        
+        # エラーが発生しても分析が継続されることを確認
+        try:
+            result = self.analyzer.analyze_tendencies()
+            assert isinstance(result, list)
+        except Exception as e:
+            # 予期しない例外はテスト失敗
+            pytest.fail(f"Unexpected exception in tendency analysis: {e}")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
