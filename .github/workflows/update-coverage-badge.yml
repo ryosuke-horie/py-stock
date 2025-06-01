@@ -1,0 +1,68 @@
+name: Update Coverage Badge
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # 手動実行も可能
+
+permissions:
+  contents: write  # README.mdの更新とコミットに必要
+
+jobs:
+  update-coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          
+      - name: Set up Python
+        run: uv python install 3.11
+        
+      - name: Install dependencies
+        run: |
+          uv sync --extra dev
+          
+      - name: Run tests and update coverage badge
+        run: |
+          uv run python scripts/update_coverage_badge.py
+          
+      - name: Check if README was updated
+        id: check-changes
+        run: |
+          git diff --quiet README.md || echo "readme_changed=true" >> $GITHUB_OUTPUT
+          
+      - name: Commit updated README
+        if: steps.check-changes.outputs.readme_changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # カバレッジ率を取得してコミットメッセージに含める
+          if [ -f coverage.json ]; then
+            COVERAGE=$(python -c "import json; print(f\"{json.load(open('coverage.json'))['totals']['percent_covered']:.1f}\")")
+            git add README.md badges/coverage.svg
+            git commit -m "chore: カバレッジバッジを自動更新 (${COVERAGE}%) [skip ci]"
+            git push
+          else
+            # フォールバック: coverage.jsonがない場合
+            git add README.md badges/coverage.svg
+            git commit -m "chore: カバレッジバッジを自動更新 [skip ci]"
+            git push
+          fi
+          
+      - name: Coverage Badge Update Summary
+        if: steps.check-changes.outputs.readme_changed == 'true'
+        run: |
+          echo "✅ カバレッジバッジが正常に更新されました"
+          if [ -f coverage.json ]; then
+            COVERAGE=$(python -c "import json; print(f\"{json.load(open('coverage.json'))['totals']['percent_covered']:.1f}\")")
+            echo "📊 現在のカバレッジ率: ${COVERAGE}%"
+          fi
