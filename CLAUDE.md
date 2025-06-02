@@ -64,6 +64,9 @@ uv run flake8 .
 uv run black .
 uv run mypy .
 
+# カバレッジバッジ更新
+uv run python scripts/update_coverage_badge.py
+
 # 分析実行
 uv run python main.py
 uv run streamlit run dashboard/app.py
