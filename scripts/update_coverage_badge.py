@@ -63,7 +63,7 @@ def main():
     print()
 
     # カバレッジしきい値チェック
-    threshold = 68.0  # pyproject.tomlのfail_underに合わせる
+    threshold = 80.0  # pyproject.tomlのfail_underに合わせる
     if coverage < threshold:
         print(f"⚠️  警告: カバレッジ率 {coverage:.1f}% がしきい値 {threshold}% を下回っています")
     else:

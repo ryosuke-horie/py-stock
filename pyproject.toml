@@ -175,7 +175,7 @@ exclude_also = [
 ]
 show_missing = true
 skip_covered = false
-fail_under = 10  # 段階的に向上: 10% -> 20% -> 35% -> 50% -> 68%
+fail_under = 80  # 現在の目標値: 80%
 precision = 2
 
 [tool.coverage.html]
@@ -198,7 +198,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-report=xml",
-    "--cov-fail-under=10",
+    "--cov-fail-under=80",
 ]
 testpaths = ["tests"]
 pythonpath = ["src"]
