@@ -147,7 +147,7 @@ class EducationGlossaryComponent:
         search_col, filter_col, difficulty_col = st.columns([2, 1, 1])
         
         with search_col:
-            search_term = st.text_input("🔍 用語を検索", placeholder="例: 移動平均線、PER、損切り")
+            search_term = st.text_input("🔍 用語を検索", placeholder="例: 移動平均線、PER、損切り", key="education_glossary_search")
         
         with filter_col:
             categories = ["全て"] + list(set(term["category"] for term in self.glossary_data.values()))

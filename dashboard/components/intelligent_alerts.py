@@ -232,7 +232,7 @@ class IntelligentAlertComponent:
         col1, col2 = st.columns(2)
         
         with col1:
-            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T")
+            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T", key="intelligent_alerts_custom_symbol")
             min_conditions = st.number_input(
                 "最小条件数",
                 min_value=1,
@@ -242,7 +242,7 @@ class IntelligentAlertComponent:
             )
         
         with col2:
-            alert_name = st.text_input("アラート名", placeholder="例: 強気ブレイクアウト")
+            alert_name = st.text_input("アラート名", placeholder="例: 強気ブレイクアウト", key="intelligent_alerts_custom_name")
         
         # 条件設定
         st.markdown("#### 📋 アラート条件")
@@ -342,9 +342,9 @@ class IntelligentAlertComponent:
         
         col1, col2 = st.columns(2)
         with col1:
-            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T")
+            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T", key="intelligent_alerts_template_symbol")
         with col2:
-            alert_name = st.text_input("アラート名", value=template)
+            alert_name = st.text_input("アラート名", value=template, key="intelligent_alerts_template_name")
         
         # テンプレート別の設定
         if "ブレイクアウト" in template:

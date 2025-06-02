@@ -293,7 +293,7 @@ class EducationSimulationComponent:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            symbol = st.text_input("📈 銘柄コード", value=st.session_state.sim_selected_symbol)
+            symbol = st.text_input("📈 銘柄コード", value=st.session_state.sim_selected_symbol, key="education_simulation_symbol")
             st.session_state.sim_selected_symbol = symbol
         
         with col2:
