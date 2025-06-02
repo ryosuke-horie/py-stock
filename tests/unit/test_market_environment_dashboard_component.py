@@ -7,6 +7,13 @@ import pytest
 import pandas as pd
 import numpy as np
 
+# matplotlibの有無をチェック
+try:
+    import matplotlib
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+
 
 class TestMarketEnvironmentDashboardComponent:
     """市場環境ダッシュボードコンポーネントのテストクラス"""
@@ -147,6 +154,38 @@ class TestMarketEnvironmentDashboardComponent:
             
         except Exception as e:
             pytest.fail(f"エッジケースでエラーが発生しました: {e}")
+    
+    def test_matplotlib_dependency_handling(self):
+        """matplotlib依存関係のハンドリングテスト（Issue #77追加対応）"""
+        df = pd.DataFrame({
+            'daily': [1.5, -0.8, 2.3],
+            'weekly': [3.2, 1.1, -1.5],
+            'monthly': [-2.1, 0.5, 4.8]
+        })
+        
+        # matplotlibが利用可能な場合のテスト
+        if HAS_MATPLOTLIB:
+            try:
+                styled_df = df.style.background_gradient(
+                    subset=['daily', 'weekly', 'monthly'], 
+                    cmap='RdYlGn'
+                )
+                assert styled_df is not None
+            except Exception as e:
+                pytest.fail(f"matplotlib利用可能環境でエラーが発生しました: {e}")
+        else:
+            # matplotlibが利用不可の場合、エラー処理の動作を確認（実際にエラーが出るまでbackground_gradientを実行）
+            try:
+                styled_df = df.style.background_gradient(
+                    subset=['daily', 'weekly', 'monthly'], 
+                    cmap='RdYlGn'
+                )
+                # HTMLに変換して実際にエラーを発生させる
+                styled_df.to_html()
+                pytest.fail("matplotlibなしでbackground_gradientが成功してしまいました")
+            except Exception as e:
+                # エラーが発生することを確認（matplotlib関連かどうかはチェックしない）
+                assert str(e) is not None
     
     def test_colormap_functionality(self):
         """カラーマップが正常に動作することをテスト"""

@@ -14,6 +14,13 @@ from src.technical_analysis.market_environment import (
 )
 from src.data_collector.stock_data_collector import StockDataCollector
 
+# matplotlibの有無をチェック
+try:
+    import matplotlib
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+
 
 def render_market_environment_tab():
     """市場環境分析タブのレンダリング"""
@@ -213,7 +220,13 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
         
         # 背景グラデーションは存在する列のみに適用
         if gradient_columns:
-            styled_df = styled_df.background_gradient(subset=gradient_columns, cmap='RdYlGn')
+            if HAS_MATPLOTLIB:
+                try:
+                    styled_df = styled_df.background_gradient(subset=gradient_columns, cmap='RdYlGn')
+                except Exception as e:
+                    st.warning(f"背景グラデーション適用エラー: {str(e)}")
+            else:
+                st.info("💡 より視覚的なデータ表示には`uv sync --extra dashboard`でmatplotlibをインストールしてください")
         
         st.dataframe(styled_df, use_container_width=True)
     

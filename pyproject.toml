@@ -60,6 +60,7 @@ dependencies = [
 dashboard = [
     "streamlit>=1.28.0",
     "plotly>=5.17.0",
+    "matplotlib>=3.7.0",  # pandas background_gradient用
 ]
 
 dev = [
@@ -219,4 +220,5 @@ asyncio_default_fixture_loop_scope = "function"
 dashboard = [
     "plotly>=6.1.1",
     "streamlit>=1.45.1",
+    "matplotlib>=3.7.0",  # pandas background_gradient用
 ]
