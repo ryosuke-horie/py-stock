@@ -73,7 +73,7 @@ class AlertComponent:
         with col2:
             email_notification = st.checkbox("メール通知", value=False)
             if email_notification:
-                email_address = st.text_input("メールアドレス", placeholder="example@email.com")
+                email_address = st.text_input("メールアドレス", placeholder="example@email.com", key="alerts_email")
         
         # 通知頻度設定
         notification_frequency = st.selectbox(
@@ -87,7 +87,7 @@ class AlertComponent:
         col1, col2 = st.columns(2)
         
         with col1:
-            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T")
+            symbol = st.text_input("銘柄コード", placeholder="例: 7203.T", key="alerts_price_symbol")
             target_price = st.number_input("目標価格", min_value=0.0, step=1.0)
         
         with col2:

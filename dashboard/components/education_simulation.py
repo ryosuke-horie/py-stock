@@ -293,7 +293,7 @@ class EducationSimulationComponent:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            symbol = st.text_input("📈 銘柄コード", value=st.session_state.sim_selected_symbol)
+            symbol = st.text_input("📈 銘柄コード", value=st.session_state.sim_selected_symbol, key="education_simulation_symbol")
             st.session_state.sim_selected_symbol = symbol
         
         with col2:
@@ -342,7 +342,7 @@ class EducationSimulationComponent:
         with col2:
             st.markdown("#### 🔴 売り注文")
             available_shares = st.session_state.sim_account._get_available_shares(symbol)
-            sell_shares = st.number_input("売り株数", min_value=1, max_value=max(available_shares, 1), value=min(100, available_shares), key="sell_shares")
+            sell_shares = st.number_input("売り株数", min_value=1, max_value=max(available_shares, 1), value=max(min(100, available_shares), 1), key="sell_shares")
             sell_price = st.number_input("売り価格", min_value=0.0, value=current_price or 1000.0, key="sell_price")
             
             proceeds = sell_shares * sell_price

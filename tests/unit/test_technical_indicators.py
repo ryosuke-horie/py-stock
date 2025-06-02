@@ -77,6 +77,17 @@ class TestTechnicalIndicators:
         with pytest.raises(ValueError, match="データが不足しています"):
             TechnicalIndicators(minimal_data)
     
+    def test_initialization_requires_data_parameter(self):
+        """dataパラメータが必須であることをテスト（Issue #75対応）"""
+        # dataパラメータなしでの初期化はTypeErrorが発生する
+        with pytest.raises(TypeError, match="missing 1 required positional argument: 'data'"):
+            TechnicalIndicators()
+    
+    def test_initialization_with_none_data(self):
+        """Noneデータでの初期化エラーテスト（Issue #75対応）"""
+        with pytest.raises((TypeError, AttributeError)):
+            TechnicalIndicators(None)
+    
     def test_sma(self):
         """SMAテスト"""
         sma_20 = self.indicators.sma(20)

@@ -654,7 +654,8 @@ def display_trade_recording_form(tracker: PerformanceTracker):
             symbol = st.text_input(
                 "銘柄コード",
                 placeholder="例: 7203.T, AAPL",
-                help="銘柄コードを入力してください"
+                help="銘柄コードを入力してください",
+                key="performance_tracking_symbol"
             )
             
             direction = st.selectbox(
@@ -681,7 +682,8 @@ def display_trade_recording_form(tracker: PerformanceTracker):
             strategy_name = st.text_input(
                 "戦略名",
                 placeholder="例: モメンタム戦略, 移動平均戦略",
-                help="使用した取引戦略名（任意）"
+                help="使用した取引戦略名（任意）",
+                key="performance_tracking_strategy"
             )
             
             signal_strength = st.slider(
@@ -782,7 +784,8 @@ def display_trade_history(tracker: PerformanceTracker):
         symbol_filter = st.text_input(
             "銘柄フィルタ",
             placeholder="例: 7203.T",
-            help="特定の銘柄のみ表示（空欄で全銘柄）"
+            help="特定の銘柄のみ表示（空欄で全銘柄）",
+            key="performance_tracking_filter"
         )
     
     with col3:

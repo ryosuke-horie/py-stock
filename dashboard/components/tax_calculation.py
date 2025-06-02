@@ -213,7 +213,7 @@ class TaxCalculationComponent:
             
             # 取引記録フォーム
             with st.form("trade_form"):
-                symbol = st.text_input("銘柄コード", value="7203.T")
+                symbol = st.text_input("銘柄コード", value="7203.T", key="tax_calc_trade_symbol")
                 
                 action = st.selectbox("売買区分", ["buy", "sell"])
                 
@@ -323,7 +323,7 @@ class TaxCalculationComponent:
             
             # NISA投資フォーム
             with st.form("nisa_form"):
-                symbol = st.text_input("銘柄コード", value="1570.T")
+                symbol = st.text_input("銘柄コード", value="1570.T", key="tax_calc_nisa_symbol")
                 
                 amount = st.number_input("投資金額（円）", min_value=1000, value=100000, step=1000)
                 
@@ -436,7 +436,7 @@ class TaxCalculationComponent:
             
             # ポジション入力フォーム
             with st.form("position_form"):
-                symbol = st.text_input("銘柄コード", value="7203.T")
+                symbol = st.text_input("銘柄コード", value="7203.T", key="tax_calc_profit_loss_symbol")
                 
                 entry_price = st.number_input("取得価格", min_value=0.01, value=2500.0, step=0.01)
                 
