@@ -49,7 +49,7 @@ class IntelligentAlertComponent:
         
         # データ収集器とインジケーター
         self.data_collector = StockDataCollector() if 'StockDataCollector' in globals() else None
-        self.indicators = TechnicalIndicators() if 'TechnicalIndicators' in globals() else None
+        self.indicators = None  # TechnicalIndicatorsは必要時にデータ付きで初期化
         self.market_analyzer = MarketEnvironmentAnalyzer() if 'MarketEnvironmentAnalyzer' in globals() else None
     
     def display(self):

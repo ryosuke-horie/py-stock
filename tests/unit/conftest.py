@@ -9,10 +9,10 @@ from datetime import datetime, timedelta
 
 
 @pytest.fixture
-def technical_indicators():
+def technical_indicators(sample_ohlcv_data):
     """TechnicalIndicatorsインスタンスを提供"""
     from src.technical_analysis.indicators import TechnicalIndicators
-    return TechnicalIndicators()
+    return TechnicalIndicators(sample_ohlcv_data)
 
 
 @pytest.fixture

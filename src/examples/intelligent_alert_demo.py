@@ -30,7 +30,7 @@ def demo_intelligent_alerts():
     # システム初期化
     alert_system = IntelligentAlertSystem()
     data_collector = StockDataCollector()
-    indicators = TechnicalIndicators()
+    indicators = None  # データ取得後に初期化
     
     # デモ用銘柄
     symbol = "7203.T"  # トヨタ自動車
@@ -47,6 +47,9 @@ def demo_intelligent_alerts():
     else:
         print(f"  - データ期間: {data.index[0]} 〜 {data.index[-1]}")
         print(f"  - データ数: {len(data)} レコード\n")
+    
+    # データ取得後にTechnicalIndicatorsを初期化
+    indicators = TechnicalIndicators(data)
     
     # 2. 市場状況分析
     print("2. 市場状況分析...")
