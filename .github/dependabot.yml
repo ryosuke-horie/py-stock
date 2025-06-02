@@ -20,6 +20,17 @@ updates:
       prefix: "deps(uv)"
       include: "scope"
     open-pull-requests-limit: 5
+    # 依存関係をグルーピング
+    groups:
+      test-dependencies:
+        patterns:
+          - "pytest*"
+          - "coverage"
+      linting-dependencies:
+        patterns:
+          - "black"
+          - "flake8"
+          - "mypy"
     # セキュリティアップデートは即座に作成
     allow:
       - dependency-type: "all"
