@@ -1,6 +1,6 @@
 # py-stock
 
-![Coverage](https://img.shields.io/badge/coverage-92.6%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-20.9%25-red)
 
 株式投資の投資タイミングの見極めをPython x Claude Code x MCPでやってみる試み
 
@@ -215,7 +215,7 @@ uv run python scripts/update_coverage_badge.py
 
 ### 利用可能なバッジ形式
 
-- **Shields.io バッジ**: `![Coverage](https://img.shields.io/badge/coverage-92.6%25-brightgreen)`
+- **Shields.io バッジ**: `![Coverage](https://img.shields.io/badge/coverage-20.9%25-red)`
 - **ローカル SVG**: `![Coverage](badges/coverage.svg)`
 
 バッジは現在の92.6%のカバレッジを示しており、プロジェクトの品質管理に役立ちます。
