@@ -186,7 +186,7 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
             'monthly': '{:.2f}%',
             'volatility': '{:.2f}%',
             'rsi': '{:.1f}'
-        }).background_gradient(subset=['daily', 'weekly', 'monthly'], cmap='RdYlGn', center=0)
+        }).background_gradient(subset=['daily', 'weekly', 'monthly'], cmap='RdYlGn')
         
         st.dataframe(styled_df, use_container_width=True)
     
