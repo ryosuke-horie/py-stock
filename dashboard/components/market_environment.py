@@ -31,12 +31,21 @@ def render_market_environment_tab():
             help="市場環境を分析する期間"
         )
         
-        # データ間隔の選択
+        # データ間隔の選択（期間に応じて制限）
+        if period in ["1d", "5d"]:
+            # 短期間の場合は細かい間隔も選択可能
+            interval_options = ["1m", "5m", "1h", "1d"]
+            default_interval = 2  # 1h
+        else:
+            # 長期間の場合は粗い間隔のみ
+            interval_options = ["1h", "1d"]
+            default_interval = 1  # 1d
+            
         interval = st.selectbox(
             "データ間隔",
-            ["1m", "5m", "1h", "1d"],
-            index=3,
-            help="価格データの時間間隔"
+            interval_options,
+            index=default_interval,
+            help="価格データの時間間隔（期間により制限されます）"
         )
         
         # 自動更新の設定
@@ -166,6 +175,7 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
     
     if not indices_performance:
         st.warning("インデックスデータを取得できませんでした")
+        st.info("ネットワーク接続やデータソースの状況を確認してください。しばらくしてから再度お試しください。")
         return
     
     # データフレームの作成
@@ -177,16 +187,33 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
     
     df = pd.DataFrame(data)
     
+    if len(df) == 0:
+        st.warning("表示可能なデータがありません")
+        return
+    
     # パフォーマンステーブルの表示
-    if 'daily' in df.columns:
+    if len(df) > 0:
+        # 存在する数値列のみをフォーマット対象にする
+        format_dict = {}
+        gradient_columns = []
+        
+        # 各列が存在するかチェックしてフォーマット辞書と背景グラデーション対象列を構築
+        percentage_columns = ['daily', 'weekly', 'monthly', 'volatility']
+        for col in percentage_columns:
+            if col in df.columns:
+                format_dict[col] = '{:.2f}%'
+                if col in ['daily', 'weekly', 'monthly']:  # パフォーマンス系列のみ背景グラデーション適用
+                    gradient_columns.append(col)
+        
+        if 'rsi' in df.columns:
+            format_dict['rsi'] = '{:.1f}'
+        
         # スタイル付きのデータフレーム表示
-        styled_df = df.style.format({
-            'daily': '{:.2f}%',
-            'weekly': '{:.2f}%',
-            'monthly': '{:.2f}%',
-            'volatility': '{:.2f}%',
-            'rsi': '{:.1f}'
-        }).background_gradient(subset=['daily', 'weekly', 'monthly'], cmap='RdYlGn')
+        styled_df = df.style.format(format_dict)
+        
+        # 背景グラデーションは存在する列のみに適用
+        if gradient_columns:
+            styled_df = styled_df.background_gradient(subset=gradient_columns, cmap='RdYlGn')
         
         st.dataframe(styled_df, use_container_width=True)
     

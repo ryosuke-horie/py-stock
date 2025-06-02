@@ -83,8 +83,36 @@ class TestMarketEnvironmentDashboardComponent:
         assert '15.23%' in html  # volatility
         assert '65.2' in html  # rsi (小数点第1位まで)
     
-    def test_market_data_structure(self):
-        """市場データの構造が正しいことをテスト"""
+    def test_market_data_structure_with_missing_columns(self):
+        """一部の列が欠けている場合の処理をテスト（Issue #77追加対応）"""
+        # dailyのみ存在するケース
+        df_minimal = pd.DataFrame({
+            'インデックス': ['NIKKEI225'],
+            'daily': [1.5]
+        })
+        
+        # 存在する列のみを背景グラデーション対象にする
+        format_dict = {}
+        gradient_columns = []
+        
+        percentage_columns = ['daily', 'weekly', 'monthly', 'volatility']
+        for col in percentage_columns:
+            if col in df_minimal.columns:
+                format_dict[col] = '{:.2f}%'
+                if col in ['daily', 'weekly', 'monthly']:
+                    gradient_columns.append(col)
+        
+        # エラーが発生しないことを確認
+        try:
+            styled_df = df_minimal.style.format(format_dict)
+            if gradient_columns:
+                styled_df = styled_df.background_gradient(subset=gradient_columns, cmap='RdYlGn')
+            assert styled_df is not None
+        except KeyError as e:
+            pytest.fail(f"列が存在しない場合の処理でエラーが発生しました: {e}")
+    
+    def test_market_data_structure_complete(self):
+        """すべての列が存在する場合の処理をテスト"""
         # 期待される列が存在することを確認
         expected_columns = ['daily', 'weekly', 'monthly', 'volatility', 'rsi']
         df = pd.DataFrame({col: [0.0] for col in expected_columns})
