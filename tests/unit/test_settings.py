@@ -785,3 +785,192 @@ class TestSettingsManager:
         assert hasattr(settings, 'scheduler')
         assert hasattr(settings, 'api')
         assert hasattr(settings, 'default_watchlists')
+
+    def test_env_overrides(self, tmp_path, monkeypatch):
+        """環境変数による設定上書きテスト"""
+        config_file = tmp_path / "env_test.json"
+        
+        # 設定ファイルを先に作成
+        initial_config = {
+            "data_collector": {"max_workers": 5, "cache_dir": "cache"},
+            "database": {"path": "cache/stock_data.db"},
+            "logging": {"level": "INFO"}
+        }
+        with open(config_file, 'w') as f:
+            json.dump(initial_config, f)
+        
+        # 環境変数を設定
+        monkeypatch.setenv("CACHE_DIR", "env_cache")
+        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        monkeypatch.setenv("DATABASE_PATH", "env_db.db")
+        monkeypatch.setenv("MAX_WORKERS", "15")
+        
+        # 新しいインスタンスを作成（環境変数が適用される）
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()  # 明示的にload_settingsを呼ぶ
+        
+        # 環境変数の値が反映されていることを確認
+        assert settings.data_collector.cache_dir == "env_cache"
+        assert settings.logging.level == "DEBUG"
+        assert settings.database.path == "env_db.db"
+        assert settings.data_collector.max_workers == 15
+
+    def test_env_overrides_invalid_values(self, tmp_path, monkeypatch):
+        """無効な環境変数値のテスト"""
+        config_file = tmp_path / "env_invalid_test.json"
+        
+        # 設定ファイルを先に作成
+        initial_config = {
+            "data_collector": {"max_workers": 5}
+        }
+        with open(config_file, 'w') as f:
+            json.dump(initial_config, f)
+        
+        # 無効なMAX_WORKERS値を設定
+        monkeypatch.setenv("MAX_WORKERS", "invalid_number")
+        
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()
+        
+        # デフォルト値が保持されることを確認
+        assert settings.data_collector.max_workers == 5  # デフォルト値
+
+    def test_get_cache_dir(self, tmp_path):
+        """キャッシュディレクトリ取得テスト"""
+        config_file = tmp_path / "cache_dir_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # カスタムキャッシュディレクトリを設定
+        custom_cache = tmp_path / "custom_cache"
+        manager.settings.data_collector.cache_dir = str(custom_cache)
+        
+        # キャッシュディレクトリを取得
+        cache_dir = manager.get_cache_dir()
+        
+        # ディレクトリが作成されていることを確認
+        assert cache_dir.exists()
+        assert cache_dir.is_dir()
+        assert str(cache_dir) == str(custom_cache)
+
+    def test_get_log_dir(self, tmp_path):
+        """ログディレクトリ取得テスト"""
+        config_file = tmp_path / "log_dir_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # カスタムログディレクトリを設定
+        custom_log = tmp_path / "custom_logs"
+        manager.settings.logging.log_dir = str(custom_log)
+        
+        # ログディレクトリを取得
+        log_dir = manager.get_log_dir()
+        
+        # ディレクトリが作成されていることを確認
+        assert log_dir.exists()
+        assert log_dir.is_dir()
+        assert str(log_dir) == str(custom_log)
+
+    @patch('src.config.settings.logger')
+    def test_setup_logging_console_enabled(self, mock_logger, tmp_path):
+        """コンソールログ有効時のログ設定テスト"""
+        config_file = tmp_path / "logging_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # コンソールログを有効に設定
+        manager.settings.logging.console_enabled = True
+        manager.settings.logging.file_enabled = False
+        
+        # ログ設定を実行
+        with patch('loguru.logger') as mock_loguru:
+            manager.setup_logging()
+            mock_loguru.remove.assert_called_once()
+            mock_loguru.add.assert_called()
+
+    @patch('src.config.settings.logger')
+    def test_setup_logging_file_enabled(self, mock_logger, tmp_path):
+        """ファイルログ有効時のログ設定テスト"""
+        config_file = tmp_path / "logging_file_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # ファイルログを有効に設定
+        manager.settings.logging.console_enabled = False
+        manager.settings.logging.file_enabled = True
+        
+        # ログ設定を実行
+        with patch('loguru.logger') as mock_loguru:
+            manager.setup_logging()
+            mock_loguru.remove.assert_called_once()
+            # ファイルログの場合、ファイルパスが渡される
+            mock_loguru.add.assert_called()
+
+    def test_setup_logging_both_disabled(self, tmp_path):
+        """両方のログが無効時のログ設定テスト"""
+        config_file = tmp_path / "logging_disabled_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 両方のログを無効に設定
+        manager.settings.logging.console_enabled = False
+        manager.settings.logging.file_enabled = False
+        
+        # ログ設定を実行（エラーなく完了することを確認）
+        with patch('loguru.logger') as mock_loguru:
+            manager.setup_logging()
+            mock_loguru.remove.assert_called_once()
+
+    def test_dataclass_field_modification(self, tmp_path):
+        """dataclassフィールドの変更テスト"""
+        config_file = tmp_path / "field_mod_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        settings = manager.settings
+        
+        # リストフィールドの変更
+        original_ops = settings.database.backup_before_operations.copy()
+        settings.database.backup_before_operations.append("new_operation")
+        
+        assert len(settings.database.backup_before_operations) == len(original_ops) + 1
+        assert "new_operation" in settings.database.backup_before_operations
+        
+        # 辞書フィールドの変更
+        settings.scheduler.data_update_intervals["30m"] = "*/30 * * * *"
+        assert "30m" in settings.scheduler.data_update_intervals
+
+    def test_from_dict_method_coverage(self, tmp_path):
+        """from_dict メソッドのカバレッジテスト"""
+        config_file = tmp_path / "from_dict_test.json"
+        
+        # 部分的なデータ
+        partial_data = {
+            "data_collector": {"max_workers": 8},
+            "invalid_section": {"some_key": "some_value"}  # 無効なセクション
+        }
+        
+        with open(config_file, 'w') as f:
+            json.dump(partial_data, f)
+        
+        manager = SettingsManager(str(config_file))
+        settings = manager.load_settings()
+        
+        # 有効なデータが適用され、無効なデータは無視される
+        assert settings.data_collector.max_workers == 8
+        assert settings.database.type == "sqlite"  # デフォルト値
+
+    def test_to_dict_method_coverage(self, tmp_path):
+        """to_dict メソッドのカバレッジテスト"""
+        config_file = tmp_path / "to_dict_test.json"
+        manager = SettingsManager(str(config_file))
+        
+        # 設定を変更
+        settings = manager.settings
+        settings.data_collector.max_workers = 12
+        settings.database.backup_enabled = False
+        
+        # 保存
+        manager.save_settings(settings)
+        
+        # JSONファイルの内容を確認
+        with open(config_file, 'r') as f:
+            saved_data = json.load(f)
+        
+        # 変更された値が正しく保存されていることを確認
+        assert saved_data["data_collector"]["max_workers"] == 12
+        assert saved_data["database"]["backup_enabled"] == False

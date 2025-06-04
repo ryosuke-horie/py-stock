@@ -328,3 +328,130 @@ class TestBackupManager:
         assert default_config.backup_compression_enabled is False
         assert default_config.daily_backup_enabled is True
         assert default_config.backup_interval_hours == 24
+
+    def test_backup_config_post_init(self):
+        """BackupConfigの__post_init__テスト"""
+        # backup_before_operationsがNoneの場合
+        config = BackupConfig(backup_before_operations=None)
+        assert config.backup_before_operations == ["remove", "clear", "reorder"]
+        
+        # backup_before_operationsが指定された場合
+        custom_ops = ["custom_op1", "custom_op2"]
+        config = BackupConfig(backup_before_operations=custom_ops)
+        assert config.backup_before_operations == custom_ops
+
+    def test_backup_manager_default_config(self):
+        """デフォルト設定でのBackupManager初期化テスト"""
+        manager = BackupManager()
+        assert isinstance(manager.config, BackupConfig)
+        assert manager.config.backup_enabled is True
+
+    def test_restore_backup_compressed(self):
+        """圧縮バックアップのリストアテスト"""
+        # 圧縮有効の設定でバックアップ作成
+        compressed_config = BackupConfig(
+            backup_enabled=True,
+            backup_dir=self.backup_dir,
+            backup_compression_enabled=True
+        )
+        compressed_manager = BackupManager(compressed_config)
+        
+        # バックアップ作成
+        backup_path = compressed_manager.create_backup(self.test_db.name)
+        assert backup_path is not None
+        assert backup_path.endswith('.gz')
+        
+        # 別のテスト用DBを作成
+        test_restore_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        test_restore_db.close()
+        
+        try:
+            # リストア実行
+            success = compressed_manager.restore_backup(backup_path, test_restore_db.name)
+            assert success
+            
+            # データが正しく復元されているか確認
+            with sqlite3.connect(test_restore_db.name) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                tables = cursor.fetchall()
+                assert len(tables) > 0
+        finally:
+            os.unlink(test_restore_db.name)
+
+    def test_restore_backup_invalid_compressed(self):
+        """無効な圧縮ファイルのリストアテスト"""
+        # 無効な圧縮ファイルを作成
+        invalid_compressed = os.path.join(self.backup_dir, "invalid.db.gz")
+        with open(invalid_compressed, 'wb') as f:
+            f.write(b"invalid compressed data")
+        
+        test_restore_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        test_restore_db.close()
+        
+        try:
+            success = self.backup_manager.restore_backup(invalid_compressed, test_restore_db.name)
+            assert not success
+        finally:
+            os.unlink(test_restore_db.name)
+
+    def test_backup_with_operation_context(self):
+        """操作コンテキスト付きバックアップテスト"""
+        backup_path = self.backup_manager.create_backup(
+            self.test_db.name, 
+            backup_type="operation",
+            operation_context="test_operation"
+        )
+        assert backup_path is not None
+        assert "operation" in backup_path
+
+    def test_list_backups_empty_directory(self):
+        """空のディレクトリでのバックアップリストテスト"""
+        empty_dir = os.path.join(self.temp_dir, "empty_backups")
+        empty_config = BackupConfig(backup_dir=empty_dir)
+        empty_manager = BackupManager(empty_config)
+        
+        backups = empty_manager.list_backups()
+        assert len(backups) == 0
+
+    def test_backup_statistics_with_no_backups(self):
+        """バックアップが存在しない場合の統計テスト"""
+        empty_dir = os.path.join(self.temp_dir, "no_backups")
+        empty_config = BackupConfig(backup_dir=empty_dir)
+        empty_manager = BackupManager(empty_config)
+        
+        stats = empty_manager.get_backup_statistics()
+        # 実際の戻り値を確認
+        assert 'total_count' in stats
+        assert stats['total_count'] == 0
+        assert stats['disk_usage_mb'] == 0
+        assert stats['latest_backup'] is None
+
+    def test_should_create_daily_backup_edge_cases(self):
+        """日次バックアップ判定のエッジケーステスト"""
+        # 設定で日次バックアップ無効の場合
+        no_daily_config = BackupConfig(daily_backup_enabled=False)
+        no_daily_manager = BackupManager(no_daily_config)
+        
+        # メソッドにはdb_pathが必要
+        assert not no_daily_manager.should_create_daily_backup(self.test_db.name)
+
+    def test_backup_info_dataclass(self):
+        """BackupInfoデータクラステスト"""
+        from datetime import datetime
+        
+        backup_info = BackupInfo(
+            file_path="/path/to/backup.db",
+            created_at=datetime.now(),
+            file_size=1024,
+            is_compressed=False,
+            original_db_path="/path/to/original.db",
+            backup_type="manual",
+            operation_context=None
+        )
+        
+        assert backup_info.file_path == "/path/to/backup.db"
+        assert backup_info.backup_type == "manual"
+        assert backup_info.file_size == 1024
+        assert not backup_info.is_compressed
+        assert backup_info.original_db_path == "/path/to/original.db"

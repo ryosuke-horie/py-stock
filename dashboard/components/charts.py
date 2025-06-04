@@ -318,7 +318,7 @@ class ChartComponent:
         """ボリンジャーバンド追加"""
         try:
             bb_data = indicators.bollinger_bands()
-            if bb_data.empty:
+            if not bb_data or bb_data['bb_upper'].empty:
                 return
             
             # 上位バンド
@@ -512,7 +512,7 @@ class ChartComponent:
             indicators = TechnicalIndicators(data)
             macd_data = indicators.macd()
             
-            if macd_data.empty:
+            if not macd_data or macd_data['macd'].empty:
                 st.warning("MACDの計算に十分なデータがありません")
                 return
             
@@ -530,7 +530,7 @@ class ChartComponent:
             # シグナルライン
             fig.add_trace(go.Scatter(
                 x=data.index,
-                y=macd_data['signal'],
+                y=macd_data['macd_signal'],
                 mode='lines',
                 name='Signal',
                 line=dict(color='red', width=2)
@@ -539,7 +539,7 @@ class ChartComponent:
             # ヒストグラム
             fig.add_trace(go.Bar(
                 x=data.index,
-                y=macd_data['histogram'],
+                y=macd_data['macd_histogram'],
                 name='Histogram',
                 marker_color='gray',
                 opacity=0.7
@@ -562,7 +562,7 @@ class ChartComponent:
             indicators = TechnicalIndicators(data)
             stoch_data = indicators.stochastic()
             
-            if stoch_data.empty:
+            if not stoch_data or stoch_data['stoch_k'].empty:
                 st.warning("ストキャスティクスの計算に十分なデータがありません")
                 return
             
