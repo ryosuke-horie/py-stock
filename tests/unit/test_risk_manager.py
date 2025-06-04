@@ -905,7 +905,9 @@ class TestRiskManager(unittest.TestCase):
         max_daily_loss = self.risk_manager.current_capital * 0.05
         self.risk_manager.daily_pnl = -max_daily_loss - 1000
         
-        exit_condition = self.risk_manager.check_exit_conditions(symbol, entry_price)
+        # 強制決済時刻前の時刻を指定
+        test_time = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, entry_price, test_time)
         
         self.assertTrue(exit_condition["should_exit"])
         self.assertEqual(exit_condition["reason"], "Daily loss limit")
