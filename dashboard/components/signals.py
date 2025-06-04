@@ -172,8 +172,8 @@ class SignalComponent:
                 'stop_loss': latest_signal.stop_loss,
                 'take_profit': latest_signal.take_profit,
                 'timestamp': latest_signal.timestamp,
-                'active_rules': list(latest_signal.conditions_met.keys()),
-                'volume': data['volume'].iloc[-1] if 'volume' in data.columns else 0
+                'active_rules': list(latest_signal.conditions_met.keys()) if hasattr(latest_signal.conditions_met, 'keys') else [],
+                'volume': data['volume'].iloc[-1] if 'volume' in data.columns and len(data['volume']) > 0 else 0
             }
             
             # 閾値チェック

@@ -34,6 +34,23 @@ class SignalStorage:
         db_dir = Path(self.db_path).parent
         db_dir.mkdir(parents=True, exist_ok=True)
     
+    def _safe_get_take_profit(self, take_profit_data, index: int):
+        """安全なtake_profit値取得"""
+        if take_profit_data is None:
+            return None
+        
+        # スカラー値の場合（単一のtake_profit値）
+        if isinstance(take_profit_data, (int, float)):
+            return take_profit_data if index == 0 else None
+        
+        # リスト・配列の場合
+        try:
+            if hasattr(take_profit_data, '__len__') and len(take_profit_data) > index:
+                return take_profit_data[index]
+            return None
+        except (IndexError, TypeError):
+            return None
+    
     def initialize_database(self):
         """データベース初期化"""
         with sqlite3.connect(self.db_path) as conn:
@@ -141,9 +158,9 @@ class SignalStorage:
                     signal_data['confidence'],
                     signal_data.get('entry_price'),
                     signal_data.get('stop_loss'),
-                    signal_data.get('take_profit', [None, None, None])[0] if signal_data.get('take_profit') else None,
-                    signal_data.get('take_profit', [None, None, None])[1] if signal_data.get('take_profit') and len(signal_data.get('take_profit', [])) > 1 else None,
-                    signal_data.get('take_profit', [None, None, None])[2] if signal_data.get('take_profit') and len(signal_data.get('take_profit', [])) > 2 else None,
+                    self._safe_get_take_profit(signal_data.get('take_profit'), 0),
+                    self._safe_get_take_profit(signal_data.get('take_profit'), 1),
+                    self._safe_get_take_profit(signal_data.get('take_profit'), 2),
                     signal_data['timestamp'],
                     active_rules_json,
                     signal_data.get('market_condition', 'unknown'),
