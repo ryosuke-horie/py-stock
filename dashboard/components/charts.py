@@ -317,7 +317,7 @@ class ChartComponent:
     def _add_bollinger_bands(self, fig: go.Figure, data: pd.DataFrame, indicators: TechnicalIndicators):
         """ボリンジャーバンド追加"""
         try:
-            bb_data = indicators.calculate_bollinger_bands()
+            bb_data = indicators.bollinger_bands()
             if bb_data.empty:
                 return
             
@@ -368,7 +368,7 @@ class ChartComponent:
     def _add_vwap(self, fig: go.Figure, data: pd.DataFrame, indicators: TechnicalIndicators):
         """VWAP追加"""
         try:
-            vwap = indicators.calculate_vwap()
+            vwap = indicators.vwap()
             if vwap.empty:
                 return
             
@@ -472,7 +472,7 @@ class ChartComponent:
         """RSIチャート表示"""
         try:
             indicators = TechnicalIndicators(data)
-            rsi = indicators.calculate_rsi()
+            rsi = indicators.rsi()
             
             if rsi.empty:
                 st.warning("RSIの計算に十分なデータがありません")
@@ -510,7 +510,7 @@ class ChartComponent:
         """MACDチャート表示"""
         try:
             indicators = TechnicalIndicators(data)
-            macd_data = indicators.calculate_macd()
+            macd_data = indicators.macd()
             
             if macd_data.empty:
                 st.warning("MACDの計算に十分なデータがありません")
@@ -560,7 +560,7 @@ class ChartComponent:
         """ストキャスティクスチャート表示"""
         try:
             indicators = TechnicalIndicators(data)
-            stoch_data = indicators.calculate_stochastic()
+            stoch_data = indicators.stochastic()
             
             if stoch_data.empty:
                 st.warning("ストキャスティクスの計算に十分なデータがありません")
