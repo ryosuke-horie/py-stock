@@ -122,27 +122,27 @@ class SignalComponent:
             
             # シグナル生成
             signal_generator = SignalGenerator(data)
-            signals = signal_generator.generate_signals(data)
+            signals = signal_generator.generate_signals()
             
-            if signals is None or signals.empty:
+            if not signals:
                 st.warning("シグナルが生成されませんでした")
                 return
             
             # 最新シグナル取得
-            latest_signal = signals.iloc[-1]
+            latest_signal = signals[-1]
             current_price = data['close'].iloc[-1]
             
             # シグナルデータ準備
             signal_data = {
                 'symbol': symbol,
-                'signal': latest_signal['signal'],
-                'strength': latest_signal['strength'],
-                'confidence': latest_signal['confidence'],
-                'entry_price': latest_signal.get('entry_price', current_price),
-                'stop_loss': latest_signal.get('stop_loss'),
-                'take_profit': latest_signal.get('take_profit'),
-                'timestamp': latest_signal['timestamp'],
-                'active_rules': list(latest_signal.get('rule_results', {}).keys()),
+                'signal': latest_signal.signal_type.value,
+                'strength': latest_signal.strength,
+                'confidence': latest_signal.confidence,
+                'entry_price': latest_signal.price,
+                'stop_loss': latest_signal.stop_loss,
+                'take_profit': latest_signal.take_profit,
+                'timestamp': latest_signal.timestamp,
+                'active_rules': list(latest_signal.conditions_met.keys()),
                 'volume': data['volume'].iloc[-1] if 'volume' in data.columns else 0
             }
             
@@ -160,8 +160,10 @@ class SignalComponent:
             # シグナル詳細
             self._display_signal_details(latest_signal, data)
             
-            # シグナル強度履歴チャート
-            self._display_signal_strength_chart(signals, symbol)
+            # シグナル強度履歴チャート（TradingSignalリストをDataFrameに変換）
+            signals_df = self._convert_signals_to_dataframe(signals)
+            if not signals_df.empty:
+                self._display_signal_strength_chart(signals_df, symbol)
         
         except Exception as e:
             st.error(f"シグナル分析エラー: {e}")
@@ -218,7 +220,7 @@ class SignalComponent:
             elif (signal_data['strength'] >= 70 and signal_data['confidence'] >= 0.7):
                 st.info(f"📈 {signal_data['signal']}シグナル発生。慎重に検討してください。")
     
-    def _display_signal_details(self, latest_signal: pd.Series, data: pd.DataFrame):
+    def _display_signal_details(self, latest_signal, data: pd.DataFrame):
         """シグナル詳細表示"""
         st.markdown("### 📋 シグナル詳細")
         
@@ -226,8 +228,8 @@ class SignalComponent:
         
         with col1:
             st.markdown("**有効ルール:**")
-            rule_results = latest_signal.get('rule_results', {})
-            active_rules = [rule for rule, active in rule_results.items() if active]
+            # TradingSignalオブジェクトのconditions_metを使用
+            active_rules = [rule for rule, active in latest_signal.conditions_met.items() if active]
             
             if active_rules:
                 for rule in active_rules:
@@ -838,9 +840,34 @@ class SignalComponent:
             )
             
             # 同じシグナルが30分以内に記録されていない場合のみ保存
-            if recent_signals.empty or recent_signals.iloc[0]['signal_type'] != signal_data['signal']:
+            if recent_signals is None or recent_signals.empty or (len(recent_signals) > 0 and recent_signals.iloc[0]['signal_type'] != signal_data['signal']):
                 self.signal_storage.store_signal(signal_data)
                 st.success(f"✅ 新しい{signal_data['signal']}シグナルを記録しました")
         
         except Exception as e:
             st.error(f"シグナル保存エラー: {e}")
+    
+    def _convert_signals_to_dataframe(self, signals: List) -> pd.DataFrame:
+        """TradingSignalリストをDataFrameに変換"""
+        if not signals:
+            return pd.DataFrame()
+        
+        try:
+            data = []
+            for signal in signals:
+                data.append({
+                    'timestamp': signal.timestamp,
+                    'signal_type': signal.signal_type.value,
+                    'strength': signal.strength,
+                    'confidence': signal.confidence,
+                    'price': signal.price,
+                    'stop_loss': signal.stop_loss,
+                    'take_profit': signal.take_profit,
+                    'risk_level': signal.risk_level,
+                    'notes': signal.notes
+                })
+            
+            return pd.DataFrame(data)
+        except Exception as e:
+            st.error(f"シグナル変換エラー: {e}")
+            return pd.DataFrame()
