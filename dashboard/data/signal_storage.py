@@ -51,6 +51,26 @@ class SignalStorage:
         except (IndexError, TypeError):
             return None
     
+    def _safe_convert_timestamp(self, timestamp_data):
+        """安全なタイムスタンプ変換"""
+        if timestamp_data is None:
+            return datetime.now().isoformat()
+        
+        # pandas Timestampの場合
+        if hasattr(timestamp_data, 'to_pydatetime'):
+            return timestamp_data.to_pydatetime().isoformat()
+        
+        # datetime objectの場合
+        if isinstance(timestamp_data, datetime):
+            return timestamp_data.isoformat()
+        
+        # 文字列の場合はそのまま返す
+        if isinstance(timestamp_data, str):
+            return timestamp_data
+        
+        # その他の場合は現在時刻を返す
+        return datetime.now().isoformat()
+    
     def initialize_database(self):
         """データベース初期化"""
         with sqlite3.connect(self.db_path) as conn:
@@ -161,7 +181,7 @@ class SignalStorage:
                     self._safe_get_take_profit(signal_data.get('take_profit'), 0),
                     self._safe_get_take_profit(signal_data.get('take_profit'), 1),
                     self._safe_get_take_profit(signal_data.get('take_profit'), 2),
-                    signal_data['timestamp'],
+                    self._safe_convert_timestamp(signal_data['timestamp']),
                     active_rules_json,
                     signal_data.get('market_condition', 'unknown'),
                     signal_data.get('volume', 0)
