@@ -329,14 +329,17 @@ class SignalComponent:
         
         # シグナル別色分け
         colors = {
-            'BUY': '#00c851',
+            'buy': '#00c851',
+            'sell': '#ff4444', 
+            'hold': '#ffc107',
+            'BUY': '#00c851',   # 大文字との互換性のため
             'SELL': '#ff4444', 
             'HOLD': '#ffc107'
         }
         
         # シグナル強度プロット
-        for signal_type in recent_signals['signal'].unique():
-            mask = recent_signals['signal'] == signal_type
+        for signal_type in recent_signals['signal_type'].unique():
+            mask = recent_signals['signal_type'] == signal_type
             signal_data = recent_signals[mask]
             
             fig.add_trace(
