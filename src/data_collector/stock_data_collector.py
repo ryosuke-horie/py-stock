@@ -138,9 +138,15 @@ class StockDataCollector:
                 data_copy = data.copy()
                 data_copy['timestamp'] = data_copy['timestamp'].astype(str)
                 
+                # DBスキーマに存在するカラムのみをフィルタリング
+                db_columns = ['symbol', 'interval', 'timestamp', 'open', 'high', 
+                             'low', 'close', 'volume', 'created_at']
+                existing_columns = [col for col in db_columns if col in data_copy.columns]
+                data_filtered = data_copy[existing_columns]
+                
                 # REPLACE INTOで重複データを上書き
-                data_copy.to_sql('stock_data', conn, if_exists='append', 
-                               index=False, method='multi')
+                data_filtered.to_sql('stock_data', conn, if_exists='append', 
+                                   index=False, method='multi')
                 
                 logger.debug(f"キャッシュ保存完了: {data['symbol'].iloc[0]} ({len(data)}件)")
                 
