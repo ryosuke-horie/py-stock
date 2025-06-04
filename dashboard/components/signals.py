@@ -287,12 +287,12 @@ class SignalComponent:
                 st.info(f"{volume_emoji} 出来高比: {volume_ratio:.2f}x")
         
         # エントリー・エグジット戦略
-        if latest_signal.get('entry_price') and latest_signal.get('stop_loss'):
+        if latest_signal.price and latest_signal.stop_loss:
             st.markdown("### 🎯 エントリー・エグジット戦略")
             
-            entry_price = latest_signal['entry_price']
-            stop_loss = latest_signal['stop_loss']
-            take_profits = latest_signal.get('take_profit', [])
+            entry_price = latest_signal.price
+            stop_loss = latest_signal.stop_loss
+            take_profits = latest_signal.take_profit if latest_signal.take_profit else None
             
             col1, col2, col3 = st.columns(3)
             
@@ -305,9 +305,9 @@ class SignalComponent:
             
             with col3:
                 if take_profits:
-                    st.success(f"**テイクプロフィット:** ¥{take_profits[0]:.2f}")
-                    if len(take_profits) > 1:
-                        st.success(f"**TP2:** ¥{take_profits[1]:.2f}")
+                    st.success(f"**テイクプロフィット:** ¥{take_profits:.2f}")
+                else:
+                    st.success("**テイクプロフィット:** 未設定")
     
     def _display_signal_strength_chart(self, signals: pd.DataFrame, symbol: str):
         """シグナル強度履歴チャート"""
@@ -530,7 +530,8 @@ class SignalComponent:
                 st.metric("出来高", f"{signal_row['volume']:,.0f}")
             
             with col3:
-                st.metric("市場状況", signal_row.get('market_condition', 'N/A'))
+                market_condition = signal_row.get('market_condition', 'N/A') if hasattr(signal_row, 'get') else 'N/A'
+                st.metric("市場状況", market_condition)
                 
                 # テイクプロフィット表示
                 tp_levels = []
