@@ -258,6 +258,111 @@ class TestCoverageBadgeGenerator:
         assert self.generator._get_color_hex("red") == "e05d44"
         assert self.generator._get_color_hex("unknown") == "lightgrey"
 
+    @patch("subprocess.run")
+    def test_run_coverage_test_exception(self, mock_run):
+        """カバレッジテスト実行時の例外テスト"""
+        mock_run.side_effect = Exception("Unexpected error")
+        
+        coverage = self.generator.run_coverage_test()
+        assert coverage is None
+
+    def test_update_readme_no_title_badge_addition(self):
+        """タイトルなしREADMEへのバッジ追加テスト"""
+        readme_path = self.project_root / "README.md"
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write("This is a project without title.")
+
+        success = self.generator.update_readme_with_badge(85.0, readme_path)
+        assert success
+
+        with open(readme_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        assert "![Coverage]" in content
+        assert "85.0%25" in content
+
+    def test_update_readme_exception_handling(self):
+        """README更新時の例外ハンドリングテスト"""
+        # 読み取り専用ディレクトリを作成
+        readonly_dir = self.project_root / "readonly"
+        readonly_dir.mkdir()
+        readme_path = readonly_dir / "README.md"
+        
+        # ファイル作成後、読み取り専用に変更
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write("# Test")
+        
+        import os
+        os.chmod(readme_path, 0o444)  # 読み取り専用
+        
+        try:
+            success = self.generator.update_readme_with_badge(85.0, readme_path)
+            assert not success
+        finally:
+            # クリーンアップ
+            os.chmod(readme_path, 0o644)
+
+    @patch("sys.argv", ["script.py", "/custom/path"])
+    @patch("src.utils.coverage_badge_generator.CoverageBadgeGenerator")
+    def test_main_with_custom_path(self, mock_generator_class):
+        """main関数でカスタムパス指定テスト"""
+        from src.utils.coverage_badge_generator import main
+        
+        mock_generator = MagicMock()
+        mock_generator.generate_badge_info.return_value = {
+            "success": True,
+            "coverage": 85.0,
+            "local_badge_path": "badges/coverage.svg",
+            "shields_io_url": "https://example.com",
+            "markdown_shields": "![Coverage](shield)",
+            "markdown_local": "![Coverage](local)"
+        }
+        mock_generator.update_readme_with_badge.return_value = True
+        mock_generator_class.return_value = mock_generator
+        
+        main()
+        
+        mock_generator_class.assert_called_once_with("/custom/path")
+
+    @patch("sys.argv", ["script.py"])
+    @patch("src.utils.coverage_badge_generator.CoverageBadgeGenerator")
+    def test_main_default_path(self, mock_generator_class):
+        """main関数でデフォルトパス使用テスト"""
+        from src.utils.coverage_badge_generator import main
+        
+        mock_generator = MagicMock()
+        mock_generator.generate_badge_info.return_value = {
+            "success": False,
+            "error": "Test error"
+        }
+        mock_generator_class.return_value = mock_generator
+        
+        main()
+        
+        mock_generator_class.assert_called_once_with(".")
+
+    @patch("sys.argv", ["script.py"])
+    @patch("src.utils.coverage_badge_generator.CoverageBadgeGenerator")
+    def test_main_update_readme_failure(self, mock_generator_class):
+        """main関数でREADME更新失敗テスト"""
+        from src.utils.coverage_badge_generator import main
+        
+        mock_generator = MagicMock()
+        mock_generator.generate_badge_info.return_value = {
+            "success": True,
+            "coverage": 85.0,
+            "local_badge_path": "badges/coverage.svg",
+            "shields_io_url": "https://example.com",
+            "markdown_shields": "![Coverage](shield)",
+            "markdown_local": "![Coverage](local)"
+        }
+        mock_generator.update_readme_with_badge.return_value = False
+        mock_generator_class.return_value = mock_generator
+        
+        main()
+        
+        mock_generator.update_readme_with_badge.assert_called_once()
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
