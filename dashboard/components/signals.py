@@ -10,6 +10,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+import pytz
 import sys
 from pathlib import Path
 
@@ -36,6 +37,35 @@ class SignalComponent:
             st.session_state.signal_monitoring = False
         if 'virtual_trading' not in st.session_state:
             st.session_state.virtual_trading = False
+    
+    def _normalize_datetime(self, dt):
+        """datetimeをtz-naiveに正規化"""
+        if dt is None:
+            return None
+        
+        # pandas Timestampの場合
+        if hasattr(dt, 'tz_localize') and hasattr(dt, 'tz_convert'):
+            if dt.tz is not None:
+                # tz-awareをUTCに変換してからtz-naiveに
+                return dt.tz_convert('UTC').tz_localize(None)
+            return dt
+        
+        # datetime objectの場合
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            # tz-awareをUTCに変換してからtz-naiveに
+            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        
+        return dt
+    
+    def _safe_datetime_diff(self, dt1, dt2):
+        """安全なdatetime差分計算"""
+        dt1_norm = self._normalize_datetime(dt1)
+        dt2_norm = self._normalize_datetime(dt2)
+        
+        if dt1_norm is None or dt2_norm is None:
+            return timedelta(0)
+        
+        return dt1_norm - dt2_norm
     
     def display(self, symbol: str, period: str = "1d", interval: str = "5m"):
         """シグナル分析表示"""
@@ -122,28 +152,28 @@ class SignalComponent:
             
             # シグナル生成
             signal_generator = SignalGenerator(data)
-            signals = signal_generator.generate_signals(data)
+            signals = signal_generator.generate_signals()
             
-            if signals is None or signals.empty:
+            if not signals:
                 st.warning("シグナルが生成されませんでした")
                 return
             
             # 最新シグナル取得
-            latest_signal = signals.iloc[-1]
+            latest_signal = signals[-1]
             current_price = data['close'].iloc[-1]
             
             # シグナルデータ準備
             signal_data = {
                 'symbol': symbol,
-                'signal': latest_signal['signal'],
-                'strength': latest_signal['strength'],
-                'confidence': latest_signal['confidence'],
-                'entry_price': latest_signal.get('entry_price', current_price),
-                'stop_loss': latest_signal.get('stop_loss'),
-                'take_profit': latest_signal.get('take_profit'),
-                'timestamp': latest_signal['timestamp'],
-                'active_rules': list(latest_signal.get('rule_results', {}).keys()),
-                'volume': data['volume'].iloc[-1] if 'volume' in data.columns else 0
+                'signal': latest_signal.signal_type.value,
+                'strength': latest_signal.strength,
+                'confidence': latest_signal.confidence,
+                'entry_price': latest_signal.price,
+                'stop_loss': latest_signal.stop_loss,
+                'take_profit': latest_signal.take_profit,
+                'timestamp': latest_signal.timestamp,
+                'active_rules': list(latest_signal.conditions_met.keys()) if hasattr(latest_signal.conditions_met, 'keys') else [],
+                'volume': data['volume'].iloc[-1] if 'volume' in data.columns and len(data['volume']) > 0 else 0
             }
             
             # 閾値チェック
@@ -160,8 +190,10 @@ class SignalComponent:
             # シグナル詳細
             self._display_signal_details(latest_signal, data)
             
-            # シグナル強度履歴チャート
-            self._display_signal_strength_chart(signals, symbol)
+            # シグナル強度履歴チャート（TradingSignalリストをDataFrameに変換）
+            signals_df = self._convert_signals_to_dataframe(signals)
+            if not signals_df.empty:
+                self._display_signal_strength_chart(signals_df, symbol)
         
         except Exception as e:
             st.error(f"シグナル分析エラー: {e}")
@@ -204,11 +236,11 @@ class SignalComponent:
         
         with col4:
             signal_time = signal_data['timestamp']
-            time_diff = datetime.now() - signal_time
+            time_diff = self._safe_datetime_diff(datetime.now(), signal_time)
             st.metric(
                 "シグナル時刻",
-                signal_time.strftime('%H:%M:%S'),
-                delta=f"{int(time_diff.total_seconds()//60)}分前"
+                self._normalize_datetime(signal_time).strftime('%H:%M:%S'),
+                delta=f"{int(abs(time_diff.total_seconds())//60)}分前"
             )
         
         # アクションアラート
@@ -218,7 +250,7 @@ class SignalComponent:
             elif (signal_data['strength'] >= 70 and signal_data['confidence'] >= 0.7):
                 st.info(f"📈 {signal_data['signal']}シグナル発生。慎重に検討してください。")
     
-    def _display_signal_details(self, latest_signal: pd.Series, data: pd.DataFrame):
+    def _display_signal_details(self, latest_signal, data: pd.DataFrame):
         """シグナル詳細表示"""
         st.markdown("### 📋 シグナル詳細")
         
@@ -226,8 +258,8 @@ class SignalComponent:
         
         with col1:
             st.markdown("**有効ルール:**")
-            rule_results = latest_signal.get('rule_results', {})
-            active_rules = [rule for rule, active in rule_results.items() if active]
+            # TradingSignalオブジェクトのconditions_metを使用
+            active_rules = [rule for rule, active in latest_signal.conditions_met.items() if active]
             
             if active_rules:
                 for rule in active_rules:
@@ -255,12 +287,12 @@ class SignalComponent:
                 st.info(f"{volume_emoji} 出来高比: {volume_ratio:.2f}x")
         
         # エントリー・エグジット戦略
-        if latest_signal.get('entry_price') and latest_signal.get('stop_loss'):
+        if latest_signal.price and latest_signal.stop_loss:
             st.markdown("### 🎯 エントリー・エグジット戦略")
             
-            entry_price = latest_signal['entry_price']
-            stop_loss = latest_signal['stop_loss']
-            take_profits = latest_signal.get('take_profit', [])
+            entry_price = latest_signal.price
+            stop_loss = latest_signal.stop_loss
+            take_profits = latest_signal.take_profit if latest_signal.take_profit else None
             
             col1, col2, col3 = st.columns(3)
             
@@ -273,9 +305,9 @@ class SignalComponent:
             
             with col3:
                 if take_profits:
-                    st.success(f"**テイクプロフィット:** ¥{take_profits[0]:.2f}")
-                    if len(take_profits) > 1:
-                        st.success(f"**TP2:** ¥{take_profits[1]:.2f}")
+                    st.success(f"**テイクプロフィット:** ¥{take_profits:.2f}")
+                else:
+                    st.success("**テイクプロフィット:** 未設定")
     
     def _display_signal_strength_chart(self, signals: pd.DataFrame, symbol: str):
         """シグナル強度履歴チャート"""
@@ -297,14 +329,17 @@ class SignalComponent:
         
         # シグナル別色分け
         colors = {
-            'BUY': '#00c851',
+            'buy': '#00c851',
+            'sell': '#ff4444', 
+            'hold': '#ffc107',
+            'BUY': '#00c851',   # 大文字との互換性のため
             'SELL': '#ff4444', 
             'HOLD': '#ffc107'
         }
         
         # シグナル強度プロット
-        for signal_type in recent_signals['signal'].unique():
-            mask = recent_signals['signal'] == signal_type
+        for signal_type in recent_signals['signal_type'].unique():
+            mask = recent_signals['signal_type'] == signal_type
             signal_data = recent_signals[mask]
             
             fig.add_trace(
@@ -400,7 +435,7 @@ class SignalComponent:
             )
         
         # データ取得
-        end_date = datetime.now()
+        end_date = self._normalize_datetime(datetime.now())
         start_date = end_date - timedelta(days=days_back)
         
         signals_df = self.signal_storage.get_signals(
@@ -498,7 +533,8 @@ class SignalComponent:
                 st.metric("出来高", f"{signal_row['volume']:,.0f}")
             
             with col3:
-                st.metric("市場状況", signal_row.get('market_condition', 'N/A'))
+                market_condition = signal_row.get('market_condition', 'N/A') if hasattr(signal_row, 'get') else 'N/A'
+                st.metric("市場状況", market_condition)
                 
                 # テイクプロフィット表示
                 tp_levels = []
@@ -684,7 +720,7 @@ class SignalComponent:
     def _display_performance_charts(self, symbol: str, days: int):
         """パフォーマンスチャート表示"""
         # パフォーマンス記録取得
-        end_date = datetime.now()
+        end_date = self._normalize_datetime(datetime.now())
         start_date = end_date - timedelta(days=days)
         
         perf_df = self.signal_storage.get_performance_records(
@@ -833,14 +869,39 @@ class SignalComponent:
             # 最近のシグナルと比較（重複チェック）
             recent_signals = self.signal_storage.get_signals(
                 symbol=signal_data['symbol'],
-                start_date=datetime.now() - timedelta(minutes=30),
+                start_date=self._normalize_datetime(datetime.now()) - timedelta(minutes=30),
                 limit=1
             )
             
             # 同じシグナルが30分以内に記録されていない場合のみ保存
-            if recent_signals.empty or recent_signals.iloc[0]['signal_type'] != signal_data['signal']:
+            if recent_signals is None or recent_signals.empty or (len(recent_signals) > 0 and recent_signals.iloc[0]['signal_type'] != signal_data['signal']):
                 self.signal_storage.store_signal(signal_data)
                 st.success(f"✅ 新しい{signal_data['signal']}シグナルを記録しました")
         
         except Exception as e:
             st.error(f"シグナル保存エラー: {e}")
+    
+    def _convert_signals_to_dataframe(self, signals: List) -> pd.DataFrame:
+        """TradingSignalリストをDataFrameに変換"""
+        if not signals:
+            return pd.DataFrame()
+        
+        try:
+            data = []
+            for signal in signals:
+                data.append({
+                    'timestamp': signal.timestamp,
+                    'signal_type': signal.signal_type.value,
+                    'strength': signal.strength,
+                    'confidence': signal.confidence,
+                    'price': signal.price,
+                    'stop_loss': signal.stop_loss,
+                    'take_profit': signal.take_profit,
+                    'risk_level': signal.risk_level,
+                    'notes': signal.notes
+                })
+            
+            return pd.DataFrame(data)
+        except Exception as e:
+            st.error(f"シグナル変換エラー: {e}")
+            return pd.DataFrame()

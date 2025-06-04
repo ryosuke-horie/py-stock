@@ -393,7 +393,7 @@ class FundamentalVisualizer:
             if metrics.equity_ratio is not None:
                 data.append({"指標": "自己資本比率", "値": metrics.equity_ratio * 100, "単位": "%"})
             
-            if not data:
+            if len(data) == 0:
                 return go.Figure()
             
             df = pd.DataFrame(data)
