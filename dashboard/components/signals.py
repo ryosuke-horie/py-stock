@@ -10,6 +10,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+import pytz
 import sys
 from pathlib import Path
 
@@ -36,6 +37,35 @@ class SignalComponent:
             st.session_state.signal_monitoring = False
         if 'virtual_trading' not in st.session_state:
             st.session_state.virtual_trading = False
+    
+    def _normalize_datetime(self, dt):
+        """datetimeをtz-naiveに正規化"""
+        if dt is None:
+            return None
+        
+        # pandas Timestampの場合
+        if hasattr(dt, 'tz_localize') and hasattr(dt, 'tz_convert'):
+            if dt.tz is not None:
+                # tz-awareをUTCに変換してからtz-naiveに
+                return dt.tz_convert('UTC').tz_localize(None)
+            return dt
+        
+        # datetime objectの場合
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            # tz-awareをUTCに変換してからtz-naiveに
+            return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+        
+        return dt
+    
+    def _safe_datetime_diff(self, dt1, dt2):
+        """安全なdatetime差分計算"""
+        dt1_norm = self._normalize_datetime(dt1)
+        dt2_norm = self._normalize_datetime(dt2)
+        
+        if dt1_norm is None or dt2_norm is None:
+            return timedelta(0)
+        
+        return dt1_norm - dt2_norm
     
     def display(self, symbol: str, period: str = "1d", interval: str = "5m"):
         """シグナル分析表示"""
@@ -206,11 +236,11 @@ class SignalComponent:
         
         with col4:
             signal_time = signal_data['timestamp']
-            time_diff = datetime.now() - signal_time
+            time_diff = self._safe_datetime_diff(datetime.now(), signal_time)
             st.metric(
                 "シグナル時刻",
-                signal_time.strftime('%H:%M:%S'),
-                delta=f"{int(time_diff.total_seconds()//60)}分前"
+                self._normalize_datetime(signal_time).strftime('%H:%M:%S'),
+                delta=f"{int(abs(time_diff.total_seconds())//60)}分前"
             )
         
         # アクションアラート
@@ -402,7 +432,7 @@ class SignalComponent:
             )
         
         # データ取得
-        end_date = datetime.now()
+        end_date = self._normalize_datetime(datetime.now())
         start_date = end_date - timedelta(days=days_back)
         
         signals_df = self.signal_storage.get_signals(
@@ -686,7 +716,7 @@ class SignalComponent:
     def _display_performance_charts(self, symbol: str, days: int):
         """パフォーマンスチャート表示"""
         # パフォーマンス記録取得
-        end_date = datetime.now()
+        end_date = self._normalize_datetime(datetime.now())
         start_date = end_date - timedelta(days=days)
         
         perf_df = self.signal_storage.get_performance_records(
@@ -835,7 +865,7 @@ class SignalComponent:
             # 最近のシグナルと比較（重複チェック）
             recent_signals = self.signal_storage.get_signals(
                 symbol=signal_data['symbol'],
-                start_date=datetime.now() - timedelta(minutes=30),
+                start_date=self._normalize_datetime(datetime.now()) - timedelta(minutes=30),
                 limit=1
             )
             
