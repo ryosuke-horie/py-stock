@@ -859,6 +859,292 @@ class TestRiskManager(unittest.TestCase):
         # ポジションサイズが妥当な範囲にあることを確認
         self.assertGreater(size, 0)
         self.assertLessEqual(size, self.risk_manager.current_capital / entry_price)
+    
+    def test_position_update_price_short(self):
+        """ショートポジションの価格更新テスト"""
+        position = Position(
+            symbol="7203.T",
+            side=PositionSide.SHORT,
+            quantity=100,
+            entry_price=1000,
+            entry_time=datetime.now(),
+            stop_loss=1050,
+            take_profit=[900]
+        )
+        
+        # 価格更新（ショートの利益）
+        position.update_price(950)
+        self.assertEqual(position.current_price, 950)
+        self.assertEqual(position.unrealized_pnl, 5000)  # (1000-950)*100
+        
+        # 価格更新（ショートの損失）
+        position.update_price(1100)
+        self.assertEqual(position.current_price, 1100)
+        self.assertEqual(position.unrealized_pnl, -10000)  # (1000-1100)*100
+    
+    def test_calculate_position_size_exception_handling(self):
+        """ポジションサイズ計算の例外処理テスト"""
+        # 不正な値で例外をモック
+        with patch.object(self.risk_manager, 'current_capital', side_effect=AttributeError()):
+            size = self.risk_manager.calculate_position_size(
+                "7203.T", 1000, 980, PositionSide.LONG
+            )
+            self.assertEqual(size, 0)
+    
+    def test_check_exit_conditions_daily_loss_limit(self):
+        """日次最大損失限界チェックテスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=1000
+        )
+        
+        # 日次損失を最大限界以上に設定
+        max_daily_loss = self.risk_manager.current_capital * 0.05
+        self.risk_manager.daily_pnl = -max_daily_loss - 1000
+        
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, entry_price)
+        
+        self.assertTrue(exit_condition["should_exit"])
+        self.assertEqual(exit_condition["reason"], "Daily loss limit")
+    
+    def test_open_position_exception_handling(self):
+        """ポジション開設の例外処理テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # calculate_stop_lossで例外を発生させる
+        with patch.object(self.risk_manager, 'calculate_stop_loss', side_effect=Exception("Test error")):
+            result = self.risk_manager.open_position(
+                symbol, PositionSide.LONG, entry_price, self.test_data, quantity=100
+            )
+            self.assertFalse(result)
+    
+    def test_close_position_exception_handling(self):
+        """ポジション決済の例外処理テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        exit_price = 1020
+        
+        # 正常にポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=100
+        )
+        
+        # positionsから削除して例外を発生させる
+        with patch.object(self.risk_manager, 'positions', side_effect=Exception("Test error")):
+            result = self.risk_manager.close_position(symbol, exit_price, "Test close")
+            self.assertFalse(result)
+    
+    def test_update_trailing_stop_exception_handling(self):
+        """トレイリングストップ更新の例外処理テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=100
+        )
+        
+        # trailing_stop_pctにアクセスできない状況をシミュレート
+        with patch.object(self.risk_manager.risk_params, 'trailing_stop_pct', side_effect=AttributeError()):
+            # エラーが発生しないことを確認（ログに記録されるのみ）
+            self.risk_manager.update_trailing_stop(symbol, 1050)
+            # ポジションが残っていることを確認
+            self.assertIn(symbol, self.risk_manager.positions)
+    
+    
+    def test_reset_daily_pnl(self):
+        """日次PnLリセットテスト"""
+        # 初期状態で0であることを確認
+        self.assertEqual(self.risk_manager.daily_pnl, 0.0)
+        
+        # 値を変更
+        self.risk_manager.daily_pnl = 10000
+        self.assertEqual(self.risk_manager.daily_pnl, 10000)
+        
+        # リセット
+        self.risk_manager.reset_daily_pnl()
+        self.assertEqual(self.risk_manager.daily_pnl, 0.0)
+    
+    def test_kelly_criterion_position_sizing(self):
+        """ケリー基準ポジションサイジングのテスト"""
+        # ショートポジションのテスト
+        entry_price = 1000
+        stop_loss = 1020  # ショートなのでエントリー価格より高い
+        
+        size = self.risk_manager.calculate_position_size(
+            "7203.T", entry_price, stop_loss, PositionSide.SHORT
+        )
+        
+        # ショートの場合もポジションサイズが計算されることを確認
+        expected_risk = self.risk_manager.current_capital * 0.02
+        risk_per_share = stop_loss - entry_price  # 20円
+        expected_size = int(expected_risk / risk_per_share)
+        expected_size = (expected_size // 100) * 100  # 100株単位
+        
+        self.assertEqual(size, expected_size)
+    
+    def test_get_portfolio_summary_empty_positions(self):
+        """空のポジションでのポートフォリオサマリーテスト"""
+        summary = self.risk_manager.get_portfolio_summary()
+        
+        self.assertEqual(summary["current_capital"], 1000000)
+        self.assertEqual(summary["initial_capital"], 1000000)
+        self.assertEqual(summary["daily_pnl"], 0.0)
+        self.assertEqual(summary["total_pnl"], 0.0)
+        self.assertEqual(summary["unrealized_pnl"], 0.0)
+        self.assertEqual(summary["open_positions"], 0)
+        self.assertEqual(len(summary["position_details"]), 0)
+    
+    def test_calculate_take_profit_levels_exception_handling(self):
+        """テイクプロフィットレベル計算の例外処理テスト"""
+        entry_price = 1000
+        stop_loss = 980
+        
+        # risk_reward_ratiosでエラーを発生させる
+        with patch.object(self.risk_manager.risk_params, 'risk_reward_ratios', side_effect=AttributeError()):
+            tp_levels = self.risk_manager.calculate_take_profit_levels(
+                entry_price, stop_loss, PositionSide.LONG
+            )
+            self.assertEqual(tp_levels, [])
+    
+    def test_calculate_stop_loss_atr_exception_handling(self):
+        """ATRベースストップロス計算の例外処理テスト"""
+        entry_price = 1000
+        
+        # TechnicalIndicatorsで例外を発生させる
+        with patch('src.risk_management.risk_manager.TechnicalIndicators', side_effect=Exception("ATR error")):
+            stop_loss = self.risk_manager.calculate_stop_loss(
+                self.test_data, entry_price, PositionSide.LONG, StopLossType.ATR_BASED
+            )
+            # 固定パーセンテージにフォールバック
+            expected = entry_price * (1 - 0.02)
+            self.assertAlmostEqual(stop_loss, expected, places=2)
+    
+    def test_risk_parameters_post_init(self):
+        """RiskParametersの__post_init__テスト"""
+        # risk_reward_ratiosがNoneの場合のデフォルト値設定
+        params = RiskParameters(risk_reward_ratios=None)
+        self.assertEqual(params.risk_reward_ratios, [1.0, 1.5, 2.0, 3.0])
+        
+        # 既に値が設定されている場合は変更されない
+        custom_ratios = [2.0, 3.0, 5.0]
+        params = RiskParameters(risk_reward_ratios=custom_ratios)
+        self.assertEqual(params.risk_reward_ratios, custom_ratios)
+    
+    def test_calculate_stop_loss_atr_empty_data(self):
+        """ATRで空データを返すケース"""
+        entry_price = 1000
+        
+        # ATRが空のSeriesを返すケース
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([], dtype=float)  # 空のSeries
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.LONG, StopLossType.ATR_BASED
+        )
+        
+        # 固定パーセンテージにフォールバック
+        expected = entry_price * (1 - 0.02)
+        self.assertAlmostEqual(stop_loss, expected, places=2)
+    
+    def test_calculate_stop_loss_atr_all_nan(self):
+        """ATRで全てNaNのデータを返すケース"""
+        entry_price = 1000
+        
+        # ATRが全てNaNのSeriesを返すケース
+        mock_technical_indicators = Mock()
+        atr_data = pd.Series([np.nan] * 100, index=range(100))
+        mock_technical_indicators.atr.return_value = atr_data
+        self.risk_manager.technical_indicators = mock_technical_indicators
+        
+        stop_loss = self.risk_manager.calculate_stop_loss(
+            self.test_data, entry_price, PositionSide.LONG, StopLossType.ATR_BASED
+        )
+        
+        # 固定パーセンテージにフォールバック
+        expected = entry_price * (1 - 0.02)
+        self.assertAlmostEqual(stop_loss, expected, places=2)
+    
+    def test_update_positions_with_exit_conditions(self):
+        """決済条件に該当するポジション更新テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.LONG, entry_price, self.test_data, quantity=100
+        )
+        
+        # ストップロス価格で更新（決済される）
+        position = self.risk_manager.positions[symbol]
+        stop_loss_price = position.stop_loss - 1  # ストップロスを下回る価格
+        
+        price_data = {symbol: stop_loss_price}
+        self.risk_manager.update_positions(price_data)
+        
+        # ポジションが決済されていることを確認
+        self.assertNotIn(symbol, self.risk_manager.positions)
+    
+    def test_check_exit_conditions_short_stop_loss(self):
+        """ショートポジションのストップロス判定テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ショートポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.SHORT, entry_price, self.test_data, quantity=100
+        )
+        
+        position = self.risk_manager.positions[symbol]
+        stop_loss_price = position.stop_loss + 1  # ストップロスを上回る価格
+        
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, stop_loss_price)
+        
+        self.assertTrue(exit_condition["should_exit"])
+        self.assertIn("Stop loss", exit_condition["reason"])
+    
+    def test_check_exit_conditions_short_take_profit(self):
+        """ショートポジションのテイクプロフィット判定テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ショートポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.SHORT, entry_price, self.test_data, quantity=100
+        )
+        
+        position = self.risk_manager.positions[symbol]
+        tp_price = position.take_profit[0] - 1  # 最初のTPを下回る価格
+        
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, tp_price)
+        
+        self.assertTrue(exit_condition["should_exit"])
+        self.assertIn("Take profit", exit_condition["reason"])
+    
+    def test_check_exit_conditions_short_trailing_stop(self):
+        """ショートポジションのトレイリングストップ判定テスト"""
+        symbol = "7203.T"
+        entry_price = 1000
+        
+        # ショートポジション開設
+        self.risk_manager.open_position(
+            symbol, PositionSide.SHORT, entry_price, self.test_data, quantity=100
+        )
+        
+        # トレイリングストップを設定
+        self.risk_manager.update_trailing_stop(symbol, 950)
+        position = self.risk_manager.positions[symbol]
+        trailing_stop_price = position.trailing_stop + 1  # トレイリングストップを上回る価格
+        
+        exit_condition = self.risk_manager.check_exit_conditions(symbol, trailing_stop_price)
+        
+        self.assertTrue(exit_condition["should_exit"])
+        self.assertIn("Trailing stop", exit_condition["reason"])
 
 
 if __name__ == '__main__':
