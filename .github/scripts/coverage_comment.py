@@ -58,8 +58,8 @@ def generate_comment(total_coverage: float, branch_coverage: float,
     """PRコメント用のMarkdownを生成"""
     
     # カバレッジ状態の判定
-    coverage_status = "✅" if total_coverage >= 68.0 else "❌"
-    threshold_text = "Target met" if total_coverage >= 68.0 else "Target not met"
+    coverage_status = "✅" if total_coverage >= 80.0 else "❌"
+    threshold_text = "Target met" if total_coverage >= 80.0 else "Target not met"
     
     comment = f"""## 📊 Test Coverage Report
 
@@ -82,7 +82,7 @@ def generate_comment(total_coverage: float, branch_coverage: float,
     
     comment += f"""
 ### Coverage Details
-- **{threshold_text}:** {coverage_status} 68% threshold {'exceeded' if total_coverage >= 68.0 else 'not met'}
+- **{threshold_text}:** {coverage_status} 80% threshold {'exceeded' if total_coverage >= 80.0 else 'not met'}
 - **Total lines:** {total_lines:,}
 - **Covered lines:** {total_lines - missing_lines:,}
 
