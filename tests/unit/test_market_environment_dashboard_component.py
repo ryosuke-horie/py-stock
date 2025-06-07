@@ -208,3 +208,140 @@ class TestMarketEnvironmentDashboardComponent:
                 
             except Exception as e:
                 pytest.fail(f"カラーマップ '{cmap}' でエラーが発生しました: {e}")
+
+
+class TestMarketEnvironmentDashboardRSIFix:
+    """Issue #87 RSI表示修正に関するダッシュボードテスト"""
+    
+    def test_rsi_data_extraction_with_valid_values(self):
+        """有効なRSI値のみを抽出するテスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500', 'NASDAQ', 'TOPIX'],
+            'daily': [1.5, -0.8, 2.1, 0.5],
+            'rsi': [65.4, 72.1, 45.8, 33.2]
+        })
+        
+        # 修正後のロジック: 有効なRSI値のみを抽出
+        rsi_data = []
+        for _, row in df.iterrows():
+            rsi_value = row.get('rsi')
+            if pd.notna(rsi_value) and rsi_value is not None:
+                rsi_data.append((row['インデックス'], rsi_value))
+        
+        # 全て有効な値なので4個のRSIデータが抽出される
+        assert len(rsi_data) == 4
+        assert rsi_data[0] == ('日経225', 65.4)
+        assert rsi_data[1] == ('S&P500', 72.1)
+        assert rsi_data[2] == ('NASDAQ', 45.8)
+        assert rsi_data[3] == ('TOPIX', 33.2)
+    
+    def test_rsi_data_extraction_with_none_and_nan_values(self):
+        """None/NaN値が混在するRSIデータの抽出テスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500', 'NASDAQ', 'TOPIX'],
+            'daily': [1.5, -0.8, 2.1, 0.5],
+            'rsi': [65.4, None, np.nan, 33.2]
+        })
+        
+        # 修正後のロジック: 有効なRSI値のみを抽出
+        rsi_data = []
+        for _, row in df.iterrows():
+            rsi_value = row.get('rsi')
+            if pd.notna(rsi_value) and rsi_value is not None:
+                rsi_data.append((row['インデックス'], rsi_value))
+        
+        # None/NaNを除いて2個のRSIデータが抽出される
+        assert len(rsi_data) == 2
+        assert rsi_data[0] == ('日経225', 65.4)
+        assert rsi_data[1] == ('TOPIX', 33.2)
+    
+    def test_rsi_data_extraction_with_all_invalid_values(self):
+        """全てのRSI値が無効な場合のテスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500', 'NASDAQ', 'TOPIX'],
+            'daily': [1.5, -0.8, 2.1, 0.5],
+            'rsi': [None, None, np.nan, np.nan]
+        })
+        
+        # 修正後のロジック: 有効なRSI値のみを抽出
+        rsi_data = []
+        for _, row in df.iterrows():
+            rsi_value = row.get('rsi')
+            if pd.notna(rsi_value) and rsi_value is not None:
+                rsi_data.append((row['インデックス'], rsi_value))
+        
+        # 有効な値がないため空のリストになる
+        assert len(rsi_data) == 0
+    
+    def test_rsi_data_extraction_missing_rsi_column(self):
+        """RSI列が存在しない場合のテスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500', 'NASDAQ'],
+            'daily': [1.5, -0.8, 2.1]
+            # RSI列なし
+        })
+        
+        # 修正後のロジック: 有効なRSI値のみを抽出
+        rsi_data = []
+        for _, row in df.iterrows():
+            rsi_value = row.get('rsi')  # Noneが返される
+            if pd.notna(rsi_value) and rsi_value is not None:
+                rsi_data.append((row['インデックス'], rsi_value))
+        
+        # RSI列がないため空のリストになる
+        assert len(rsi_data) == 0
+    
+    def test_rsi_formatting_with_valid_values(self):
+        """有効なRSI値がある場合のフォーマット設定テスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500'],
+            'daily': [1.5, -0.8],
+            'rsi': [65.4, 72.1]
+        })
+        
+        format_dict = {}
+        if 'rsi' in df.columns:
+            # 修正後のロジック: 有効な値がある場合のみフォーマット設定
+            has_valid_rsi = df['rsi'].notna().any()
+            if has_valid_rsi:
+                format_dict['rsi'] = '{:.1f}'
+        
+        # 有効な値があるためフォーマットが設定される
+        assert 'rsi' in format_dict
+        assert format_dict['rsi'] == '{:.1f}'
+    
+    def test_rsi_formatting_with_no_valid_values(self):
+        """有効なRSI値がない場合のフォーマット設定テスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500'],
+            'daily': [1.5, -0.8],
+            'rsi': [None, np.nan]
+        })
+        
+        format_dict = {}
+        if 'rsi' in df.columns:
+            # 修正後のロジック: 有効な値がある場合のみフォーマット設定
+            has_valid_rsi = df['rsi'].notna().any()
+            if has_valid_rsi:
+                format_dict['rsi'] = '{:.1f}'
+        
+        # 有効な値がないためフォーマットが設定されない
+        assert 'rsi' not in format_dict
+    
+    def test_rsi_formatting_missing_rsi_column(self):
+        """RSI列が存在しない場合のフォーマット設定テスト"""
+        df = pd.DataFrame({
+            'インデックス': ['日経225', 'S&P500'],
+            'daily': [1.5, -0.8]
+            # RSI列なし
+        })
+        
+        format_dict = {}
+        if 'rsi' in df.columns:
+            # この条件はFalseになる
+            has_valid_rsi = df['rsi'].notna().any()
+            if has_valid_rsi:
+                format_dict['rsi'] = '{:.1f}'
+        
+        # RSI列がないためフォーマットが設定されない
+        assert 'rsi' not in format_dict

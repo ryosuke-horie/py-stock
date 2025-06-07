@@ -213,7 +213,10 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
                     gradient_columns.append(col)
         
         if 'rsi' in df.columns:
-            format_dict['rsi'] = '{:.1f}'
+            # RSI列が存在し、有効な値がある場合のみフォーマット設定
+            has_valid_rsi = df['rsi'].notna().any()
+            if has_valid_rsi:
+                format_dict['rsi'] = '{:.1f}'
         
         # スタイル付きのデータフレーム表示
         styled_df = df.style.format(format_dict)
@@ -255,12 +258,22 @@ def render_indices_performance(indices_performance: Dict[str, Dict[str, float]])
     # RSIゲージの表示
     if 'rsi' in df.columns:
         st.subheader("📊 RSI指標")
-        cols = st.columns(min(len(df), 4))
         
-        for idx, (_, row) in enumerate(df.iterrows()):
-            if idx < len(cols) and pd.notna(row.get('rsi')):
-                with cols[idx]:
-                    render_rsi_gauge(row['インデックス'], row['rsi'])
+        # RSI値が存在するインデックスのみを抽出
+        rsi_data = []
+        for _, row in df.iterrows():
+            rsi_value = row.get('rsi')
+            if pd.notna(rsi_value) and rsi_value is not None:
+                rsi_data.append((row['インデックス'], rsi_value))
+        
+        if rsi_data:
+            cols = st.columns(min(len(rsi_data), 4))
+            for idx, (index_name, rsi_value) in enumerate(rsi_data):
+                if idx < len(cols):
+                    with cols[idx]:
+                        render_rsi_gauge(index_name, rsi_value)
+        else:
+            st.info("💡 RSI計算には十分なデータが必要です。より長い期間（1mo以上）を選択してください。")
 
 
 def render_sector_analysis(sector_performance: Dict[str, float]):
