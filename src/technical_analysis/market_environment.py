@@ -191,11 +191,19 @@ class MarketEnvironmentAnalyzer:
                 if len(data) >= 20:
                     returns['volatility'] = data['close'].pct_change().rolling(20).std().iloc[-1] * np.sqrt(252) * 100
                 
-                # テクニカル指標
-                indicators = TechnicalIndicators(data)
-                rsi_data = indicators.rsi(14)
-                if rsi_data is not None and not rsi_data.empty:
-                    returns['rsi'] = rsi_data.iloc[-1]
+                # テクニカル指標（RSI計算には十分なデータが必要）
+                if len(data) >= 15:  # RSI(14)計算には最低15行必要
+                    try:
+                        indicators = TechnicalIndicators(data)
+                        rsi_data = indicators.rsi(14)
+                        if rsi_data is not None and not rsi_data.empty:
+                            # 最新のRSI値を取得（NaNでないことを確認）
+                            latest_rsi = rsi_data.iloc[-1]
+                            if pd.notna(latest_rsi):
+                                returns['rsi'] = latest_rsi
+                    except Exception as rsi_error:
+                        print(f"インデックス {name} のRSI計算エラー: {rsi_error}")
+                        # RSI計算が失敗した場合はNoneを設定せず、単にスキップ
                 
                 performance[name] = returns
                 
