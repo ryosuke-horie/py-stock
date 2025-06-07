@@ -515,3 +515,125 @@ class TestMarketEnvironmentAnalyzerEdgeCases:
         assert 'nikkei225' in result
         assert 'daily' in result['nikkei225']
         assert 'rsi' not in result['nikkei225']
+
+
+class TestMarketEnvironmentAnalyzerRSIFix:
+    """Issue #87 RSI修正に関するテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのインスタンスを作成"""
+        return MarketEnvironmentAnalyzer()
+    
+    def create_test_data(self, num_rows: int) -> pd.DataFrame:
+        """指定した行数のテストデータを作成"""
+        dates = pd.date_range(end=datetime.now(), periods=num_rows)
+        base_price = 100
+        prices = [base_price + i * 0.5 + np.random.normal(0, 1) for i in range(num_rows)]
+        
+        return pd.DataFrame({
+            'timestamp': dates,
+            'open': [p * 0.99 for p in prices],
+            'high': [p * 1.01 for p in prices],
+            'low': [p * 0.98 for p in prices],
+            'close': prices,
+            'volume': [100000] * num_rows
+        })
+    
+    def test_calculate_indices_performance_insufficient_data_for_rsi(self, analyzer):
+        """RSI計算に必要なデータが不足している場合のテスト"""
+        # 14行のデータ（RSI計算には不足）
+        insufficient_data = self.create_test_data(14)
+        indices_data = {'test_index': insufficient_data}
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # RSIは計算されない
+        assert 'test_index' in result
+        assert 'rsi' not in result['test_index']
+        # 他の指標は計算される
+        assert 'daily' in result['test_index']
+    
+    def test_calculate_indices_performance_minimum_data_for_rsi(self, analyzer):
+        """RSI計算に最低限必要なデータ（15行）がある場合のテスト"""
+        # ちょうど15行のデータ
+        minimum_data = self.create_test_data(15)
+        indices_data = {'test_index': minimum_data}
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # RSIが計算される可能性がある（NaNでない場合）
+        assert 'test_index' in result
+        if 'rsi' in result['test_index']:
+            # RSIが存在する場合は有効な値であることを確認
+            assert pd.notna(result['test_index']['rsi'])
+            assert 0 <= result['test_index']['rsi'] <= 100
+    
+    def test_calculate_indices_performance_sufficient_data_for_rsi(self, analyzer):
+        """RSI計算に十分なデータがある場合のテスト"""
+        # 十分なデータ（30行）
+        sufficient_data = self.create_test_data(30)
+        indices_data = {'test_index': sufficient_data}
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # RSIが計算される
+        assert 'test_index' in result
+        assert 'rsi' in result['test_index']
+        assert pd.notna(result['test_index']['rsi'])
+        assert 0 <= result['test_index']['rsi'] <= 100
+    
+    @patch('src.technical_analysis.market_environment.TechnicalIndicators')
+    def test_calculate_indices_performance_rsi_calculation_exception(self, mock_ti_class, analyzer):
+        """RSI計算で例外が発生した場合のテスト"""
+        # TechnicalIndicatorsの初期化で例外を発生させる
+        mock_ti_class.side_effect = Exception("RSI calculation error")
+        
+        sufficient_data = self.create_test_data(30)
+        indices_data = {'test_index': sufficient_data}
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # 例外が発生してもRSI以外は計算される
+        assert 'test_index' in result
+        assert 'rsi' not in result['test_index']
+        assert 'daily' in result['test_index']
+    
+    @patch('src.technical_analysis.indicators.TechnicalIndicators.rsi')
+    def test_calculate_indices_performance_rsi_returns_nan(self, mock_rsi, analyzer):
+        """RSI計算がNaNを返す場合のテスト"""
+        # RSI計算でNaNを返すモック
+        mock_rsi.return_value = pd.Series([np.nan, np.nan, np.nan])
+        
+        sufficient_data = self.create_test_data(30)
+        indices_data = {'test_index': sufficient_data}
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # NaNのRSI値は含まれない
+        assert 'test_index' in result
+        assert 'rsi' not in result['test_index']
+    
+    def test_calculate_indices_performance_mixed_data_sizes(self, analyzer):
+        """異なるデータサイズが混在する場合のテスト"""
+        indices_data = {
+            'sufficient_index': self.create_test_data(30),    # 十分なデータ
+            'insufficient_index': self.create_test_data(10),  # 不十分なデータ
+            'minimum_index': self.create_test_data(15)        # 最低限のデータ
+        }
+        
+        result = analyzer._calculate_indices_performance(indices_data)
+        
+        # 十分なデータのインデックスはRSIが計算される
+        assert 'sufficient_index' in result
+        assert 'rsi' in result['sufficient_index']
+        
+        # 不十分なデータのインデックスはRSIが計算されない
+        assert 'insufficient_index' in result
+        assert 'rsi' not in result['insufficient_index']
+        
+        # 最低限のデータのインデックスは条件次第
+        assert 'minimum_index' in result
+        # RSIは計算される可能性があるが、NaNでないことを確認
+        if 'rsi' in result['minimum_index']:
+            assert pd.notna(result['minimum_index']['rsi'])
