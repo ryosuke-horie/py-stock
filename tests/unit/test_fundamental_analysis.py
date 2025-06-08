@@ -487,9 +487,8 @@ class TestFundamentalAnalyzerErrorHandling:
         
         result = analyzer.analyze_growth_trend('INSUFFICIENT')
         
-        # データ不足でもGrowthTrendオブジェクトが返される
-        assert result is not None
-        assert result.revenue_cagr is None or isinstance(result.revenue_cagr, float)
+        # データ不足の場合はNoneが返される（今回の改善で仕様変更）
+        assert result is None
 
 
 class TestFundamentalAnalyzerEdgeCases:
