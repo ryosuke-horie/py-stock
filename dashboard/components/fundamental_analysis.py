@@ -78,6 +78,8 @@ def render_fundamental_analysis_tab():
             progress_bar.progress(40)
             
             growth_trend = analyzer.analyze_growth_trend(symbol, years)
+            if not growth_trend:
+                st.warning(f"銘柄 {symbol} の成長トレンドデータが不十分です。財務諸表データが取得できない可能性があります。")
             
             # 3. 財務健全性スコア算出
             status_text.text("財務健全性スコア算出中...")
