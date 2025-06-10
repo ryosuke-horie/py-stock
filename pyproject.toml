@@ -64,7 +64,7 @@ dashboard = [
 ]
 
 dev = [
-    "pytest>=8.0.0",
+    "pytest>=8.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
     "pytest-xdist>=3.5.0",
@@ -91,7 +91,7 @@ packages = ["src"]
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=8.0.0",
+    "pytest>=8.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
     "pytest-xdist>=3.5.0",
@@ -182,13 +182,13 @@ precision = 2
 [tool.coverage.html]
 directory = "htmlcov"
 skip_covered = false
-show_contexts = true
+show_contexts = false
 
 [tool.coverage.xml]
 output = "coverage.xml"
 
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "8.4"
 addopts = [
     "--import-mode=importlib",
     "--strict-markers",
@@ -206,7 +206,6 @@ pythonpath = ["src"]
 filterwarnings = [
     "error",
     "ignore::UserWarning",
-    "ignore::DeprecationWarning",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
