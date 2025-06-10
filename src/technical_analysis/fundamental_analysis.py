@@ -205,6 +205,7 @@ class FundamentalAnalyzer:
             financials, _ = self._get_financial_data(symbol)
 
             if financials.empty:
+                logger.warning(f"財務諸表データが空です: {symbol}")
                 return None
 
             # データを年度順に並び替え
@@ -219,6 +220,8 @@ class FundamentalAnalyzer:
             profit_data = []
             year_labels = []
 
+            logger.info(f"財務諸表の行インデックス: {list(financials.index)}")
+
             for col in financials.columns:
                 year_labels.append(col.strftime("%Y"))
 
@@ -229,7 +232,16 @@ class FundamentalAnalyzer:
                 if not revenue.empty:
                     revenue_data.append(float(revenue.iloc[0]))
                 else:
-                    revenue_data.append(np.nan)
+                    # より柔軟な売上データの検索
+                    revenue_alt = financials.loc[
+                        financials.index.str.contains("Revenue|Sales", na=False, case=False), col
+                    ]
+                    if not revenue_alt.empty:
+                        revenue_data.append(float(revenue_alt.iloc[0]))
+                        logger.info(f"売上データを代替項目で発見: {revenue_alt.index[0]}")
+                    else:
+                        revenue_data.append(np.nan)
+                        logger.warning(f"売上データが見つかりません: {symbol}, {col.strftime('%Y')}")
 
                 # 純利益（Net Income）
                 profit = financials.loc[
@@ -238,11 +250,31 @@ class FundamentalAnalyzer:
                 if not profit.empty:
                     profit_data.append(float(profit.iloc[0]))
                 else:
-                    profit_data.append(np.nan)
+                    # より柔軟な純利益データの検索
+                    profit_alt = financials.loc[
+                        financials.index.str.contains("Net Income|Profit", na=False, case=False), col
+                    ]
+                    if not profit_alt.empty:
+                        profit_data.append(float(profit_alt.iloc[0]))
+                        logger.info(f"利益データを代替項目で発見: {profit_alt.index[0]}")
+                    else:
+                        profit_data.append(np.nan)
+                        logger.warning(f"利益データが見つかりません: {symbol}, {col.strftime('%Y')}")
 
             # CAGRの計算
             revenue_cagr = self._calculate_cagr(revenue_data)
             profit_cagr = self._calculate_cagr(profit_data)
+
+            # データの有効性チェック
+            revenue_valid_count = len([x for x in revenue_data if not np.isnan(x)])
+            profit_valid_count = len([x for x in profit_data if not np.isnan(x)])
+            
+            logger.info(f"有効な売上データ数: {revenue_valid_count}/{len(revenue_data)}")
+            logger.info(f"有効な利益データ数: {profit_valid_count}/{len(profit_data)}")
+            
+            if revenue_valid_count < 2 and profit_valid_count < 2:
+                logger.warning(f"成長トレンド分析に十分なデータがありません: {symbol}")
+                return None
 
             # 変動性の計算（標準偏差 / 平均）
             volatility = None

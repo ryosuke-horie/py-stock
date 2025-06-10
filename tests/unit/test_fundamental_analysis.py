@@ -487,9 +487,8 @@ class TestFundamentalAnalyzerErrorHandling:
         
         result = analyzer.analyze_growth_trend('INSUFFICIENT')
         
-        # データ不足でもGrowthTrendオブジェクトが返される
-        assert result is not None
-        assert result.revenue_cagr is None or isinstance(result.revenue_cagr, float)
+        # データ不足の場合はNoneが返される（今回の改善で仕様変更）
+        assert result is None
 
 
 class TestFundamentalAnalyzerEdgeCases:
@@ -627,6 +626,259 @@ class TestFundamentalAnalyzerEdgeCases:
         assert result is not None
         assert isinstance(result.revenue_cagr, (float, type(None)))
         assert isinstance(result.profit_cagr, (float, type(None)))
+
+
+class TestFundamentalAnalyzerEnhancedErrorHandling:
+    """今回の改善内容（Issue #97対応）のテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_empty_financials_warning_log(self, mock_logger, mock_ticker, analyzer):
+        """空の財務諸表データ時の警告ログテスト"""
+        # 空のDataFrameを返すモック
+        mock_instance = Mock()
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('EMPTY_TEST')
+        
+        # 結果確認
+        assert result is None
+        
+        # 警告ログが出力されることを確認
+        mock_logger.warning.assert_called_with("財務諸表データが空です: EMPTY_TEST")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_alternative_revenue_search(self, mock_logger, mock_ticker, analyzer):
+        """代替売上データ検索のテスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # "Total Revenue"がない代わりに"Revenue"がある財務データ
+        data = {
+            dates[0]: [1000000000, 100000000],
+            dates[1]: [900000000, 85000000],
+            dates[2]: [800000000, 70000000]
+        }
+        
+        # "Total Revenue"ではなく"Revenue"と"Net Income"を使用
+        financials = pd.DataFrame(data, index=['Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('ALT_REVENUE_TEST')
+        
+        # 結果確認
+        assert result is not None
+        assert len(result.revenue_trend) == 3
+        assert result.revenue_trend[-1] == 1000000000  # 2024年のRevenue（最新）
+        
+        # 代替項目発見のログが出力されることを確認
+        mock_logger.info.assert_any_call("売上データを代替項目で発見: Revenue")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_alternative_profit_search(self, mock_logger, mock_ticker, analyzer):
+        """代替利益データ検索のテスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # "Net Income"がない代わりに"Profit"がある財務データ
+        data = {
+            dates[0]: [1000000000, 100000000],
+            dates[1]: [900000000, 85000000],
+            dates[2]: [800000000, 70000000]
+        }
+        
+        # "Total Revenue"と"Profit"を使用
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Profit'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('ALT_PROFIT_TEST')
+        
+        # 結果確認
+        assert result is not None
+        assert len(result.profit_trend) == 3
+        assert result.profit_trend[-1] == 100000000  # 2024年のProfit（最新）
+        
+        # 代替項目発見のログが出力されることを確認
+        mock_logger.info.assert_any_call("利益データを代替項目で発見: Profit")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_missing_data_warning(self, mock_logger, mock_ticker, analyzer):
+        """売上・利益データが見つからない場合の警告ログテスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31)
+        ]
+        
+        # 売上・利益データが存在しない財務データ
+        data = {
+            dates[0]: [1000000000, 50000000],
+            dates[1]: [900000000, 45000000]
+        }
+        
+        # 関係ない項目のみ
+        financials = pd.DataFrame(data, index=['Other Income', 'Other Expense'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('MISSING_DATA_TEST')
+        
+        # 結果確認（データ不足でNoneが返される）
+        assert result is None
+        
+        # 売上・利益データが見つからない警告ログが出力されることを確認
+        mock_logger.warning.assert_any_call("売上データが見つかりません: MISSING_DATA_TEST, 2024")
+        mock_logger.warning.assert_any_call("利益データが見つかりません: MISSING_DATA_TEST, 2024")
+        mock_logger.warning.assert_any_call("成長トレンド分析に十分なデータがありません: MISSING_DATA_TEST")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_insufficient_valid_data(self, mock_logger, mock_ticker, analyzer):
+        """有効データ不足時の処理テスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # 売上データが1件、利益データが1件のみ有効
+        data = {
+            dates[0]: [1000000000, np.nan],  # 売上のみ
+            dates[1]: [np.nan, 85000000],    # 利益のみ
+            dates[2]: [np.nan, np.nan]       # どちらもなし
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('INSUFFICIENT_VALID_DATA_TEST')
+        
+        # 結果確認（有効データが2件未満のためNoneが返される）
+        assert result is None
+        
+        # 有効データ数のログが出力されることを確認
+        mock_logger.info.assert_any_call("有効な売上データ数: 1/3")
+        mock_logger.info.assert_any_call("有効な利益データ数: 1/3")
+        mock_logger.warning.assert_any_call("成長トレンド分析に十分なデータがありません: INSUFFICIENT_VALID_DATA_TEST")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_financial_index_logging(self, mock_logger, mock_ticker, analyzer):
+        """財務諸表インデックス情報ログテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        data = {
+            dates[0]: [1000000000, 100000000],
+            dates[1]: [900000000, 85000000]
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('INDEX_LOG_TEST')
+        
+        # 結果確認
+        assert result is not None
+        
+        # 財務諸表インデックス情報のログが出力されることを確認
+        expected_index_list = ['Total Revenue', 'Net Income']
+        mock_logger.info.assert_any_call(f"財務諸表の行インデックス: {expected_index_list}")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_sufficient_single_type_data(self, mock_logger, mock_ticker, analyzer):
+        """一方のデータのみ十分な場合の処理テスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31)
+        ]
+        
+        # 売上データは十分、利益データは不足
+        data = {
+            dates[0]: [1000000000, np.nan],
+            dates[1]: [900000000, 85000000],
+            dates[2]: [800000000, np.nan]
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('SINGLE_TYPE_SUFFICIENT_TEST')
+        
+        # 結果確認（売上データが十分なので分析結果が返される）
+        assert result is not None
+        assert len(result.revenue_trend) == 3
+        assert result.revenue_cagr is not None
+        
+        # 有効データ数のログが出力されることを確認
+        mock_logger.info.assert_any_call("有効な売上データ数: 3/3")
+        mock_logger.info.assert_any_call("有効な利益データ数: 1/3")
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_analyze_growth_trend_case_insensitive_search(self, mock_logger, mock_ticker, analyzer):
+        """大文字小文字を区別しない検索のテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        data = {
+            dates[0]: [1000000000, 100000000],
+            dates[1]: [900000000, 85000000]
+        }
+        
+        # 小文字の項目名
+        financials = pd.DataFrame(data, index=['revenue', 'profit'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('CASE_INSENSITIVE_TEST')
+        
+        # 結果確認
+        assert result is not None
+        assert len(result.revenue_trend) == 2
+        assert len(result.profit_trend) == 2
+        
+        # 代替項目発見のログが出力されることを確認
+        mock_logger.info.assert_any_call("売上データを代替項目で発見: revenue")
+        mock_logger.info.assert_any_call("利益データを代替項目で発見: profit")
 
 
 class TestFundamentalAnalyzerAdvancedFeatures:
