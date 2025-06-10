@@ -20,6 +20,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from src.data_collector.stock_data_collector import StockDataCollector
+from src.data_collector.symbol_manager import SymbolManager
 from src.technical_analysis.indicators import TechnicalIndicators
 from src.technical_analysis.signal_generator import SignalGenerator
 from src.risk_management.risk_manager import RiskManager, RiskParameters
@@ -121,6 +122,7 @@ class StockDashboard:
         """初期化"""
         self.data_collector = StockDataCollector()
         self.utils = DashboardUtils()
+        self.symbol_manager = SymbolManager()
         
         # ウォッチリストストレージ初期化
         self.watchlist_storage = WatchlistStorage()
@@ -241,32 +243,42 @@ class StockDashboard:
         
         # 新しい銘柄追加
         new_symbol = st.sidebar.text_input("銘柄コードを追加:")
+        new_company_name = st.sidebar.text_input(
+            "会社名（任意）:",
+            help="会社名を入力すると、ウォッチリストに表示されます。空欄の場合は自動取得されます。"
+        )
         if st.sidebar.button("➕ 追加"):
             if new_symbol and new_symbol not in st.session_state.watchlist:
-                # DBに追加
-                if self.watchlist_storage.add_symbol(new_symbol.upper()):
+                # DBに追加（会社名も含む）
+                if self.watchlist_storage.add_symbol(new_symbol.upper(), new_company_name.strip() if new_company_name else None):
                     # 成功した場合、セッション状態も更新
                     st.session_state.watchlist = self.watchlist_storage.get_symbols()
-                    st.success(f"銘柄を追加しました: {new_symbol.upper()}")
+                    display_name = f"{new_symbol.upper()}" + (f" ({new_company_name.strip()})" if new_company_name.strip() else "")
+                    st.success(f"銘柄を追加しました: {display_name}")
                     st.rerun()
                 else:
                     st.error(f"銘柄の追加に失敗しました: {new_symbol}")
         
         # ウォッチリスト表示と削除
-        for i, symbol in enumerate(st.session_state.watchlist):
+        watchlist_items = self.watchlist_storage.get_watchlist_items()
+        for i, item in enumerate(watchlist_items):
             col1, col2 = st.sidebar.columns([3, 1])
             with col1:
-                st.write(symbol)
+                # 銘柄コード + 会社名表示
+                display_name = item.symbol
+                if item.name and item.name != "N/A":
+                    display_name = f"{item.symbol} ({item.name})"
+                st.write(display_name)
             with col2:
                 if st.button("❌", key=f"del_{i}"):
                     # DBから削除
-                    if self.watchlist_storage.remove_symbol(symbol):
+                    if self.watchlist_storage.remove_symbol(item.symbol):
                         # 成功した場合、セッション状態も更新
                         st.session_state.watchlist = self.watchlist_storage.get_symbols()
-                        st.success(f"銘柄を削除しました: {symbol}")
+                        st.success(f"銘柄を削除しました: {display_name}")
                         st.rerun()
                     else:
-                        st.error(f"銘柄の削除に失敗しました: {symbol}")
+                        st.error(f"銘柄の削除に失敗しました: {item.symbol}")
         
         st.sidebar.markdown("---")
         
@@ -419,6 +431,10 @@ class StockDashboard:
             
             colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
             
+            # WatchlistStorageからカスタム会社名を含む詳細情報を取得
+            watchlist_items = self.watchlist_storage.get_watchlist_items()
+            symbol_to_name = {item.symbol: item.name for item in watchlist_items}
+            
             for i, symbol in enumerate(st.session_state.watchlist[:5]):  # 最大5銘柄
                 try:
                     data = self.data_collector.get_stock_data(symbol, period="1d", interval="5m")
@@ -426,13 +442,25 @@ class StockDashboard:
                         # 正規化（開始価格を100として）
                         normalized_prices = (data['close'] / data['close'].iloc[0]) * 100
                         
+                        # カスタム会社名を優先して使用、なければSymbolManagerから取得
+                        custom_name = symbol_to_name.get(symbol)
+                        if custom_name and custom_name != "N/A":
+                            display_name = f"{symbol} ({custom_name})"
+                        else:
+                            # フォールバック: SymbolManagerから取得
+                            symbol_info = self.symbol_manager.get_symbol_info(symbol)
+                            if symbol_info['name'] != 'N/A':
+                                display_name = f"{symbol} ({symbol_info['name']})"
+                            else:
+                                display_name = symbol
+                        
                         fig.add_trace(go.Scatter(
                             x=data['timestamp'],
                             y=normalized_prices,
                             mode='lines',
-                            name=symbol,
+                            name=display_name,
                             line=dict(color=colors[i % len(colors)]),
-                            hovertemplate=f"{symbol}<br>価格: %{{y:.2f}}<br>時刻: %{{x}}<extra></extra>"
+                            hovertemplate=f"{display_name}<br>価格: %{{y:.2f}}<br>時刻: %{{x}}<extra></extra>"
                         ))
                 except Exception as e:
                     st.warning(f"データ取得エラー ({symbol}): {e}")

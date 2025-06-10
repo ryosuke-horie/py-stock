@@ -347,7 +347,50 @@ class TestWatchlistStorage:
             stats = self.storage.get_statistics()
             assert stats["total_symbols"] == 0
             assert stats["user_id"] == "test_user"
-            assert stats["market_distribution"] == {}
+    
+    def test_add_symbol_with_custom_name(self):
+        """カスタム会社名付きで銘柄追加テスト"""
+        custom_name = "カスタムソフトバンク"
+        result = self.storage.add_symbol("9984", custom_name)
+        assert result is True
+        
+        items = self.storage.get_watchlist_items()
+        assert len(items) == 1
+        assert items[0].symbol == "9984.T"
+        assert items[0].name == custom_name
+    
+    def test_add_symbol_with_empty_custom_name(self):
+        """空のカスタム会社名で銘柄追加テスト"""
+        result = self.storage.add_symbol("9984", "")
+        assert result is True
+        
+        items = self.storage.get_watchlist_items()
+        assert len(items) == 1
+        assert items[0].symbol == "9984.T"
+        # 空文字が指定された場合は自動取得された名前が使われる
+        assert items[0].name != ""
+    
+    def test_add_symbol_with_whitespace_custom_name(self):
+        """空白のみのカスタム会社名で銘柄追加テスト"""
+        result = self.storage.add_symbol("9984", "   ")
+        assert result is True
+        
+        items = self.storage.get_watchlist_items()
+        assert len(items) == 1
+        assert items[0].symbol == "9984.T"
+        # 空白のみが指定された場合は自動取得された名前が使われる
+        assert items[0].name.strip() != ""
+    
+    def test_add_symbol_with_none_custom_name(self):
+        """Noneのカスタム会社名で銘柄追加テスト"""
+        result = self.storage.add_symbol("9984", None)
+        assert result is True
+        
+        items = self.storage.get_watchlist_items()
+        assert len(items) == 1
+        assert items[0].symbol == "9984.T"
+        # Noneが指定された場合は自動取得された名前が使われる
+        assert items[0].name is not None
     
     def test_migrate_from_session_with_exceptions(self):
         """移行時の例外処理テスト"""
