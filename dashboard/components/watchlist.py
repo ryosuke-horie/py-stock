@@ -58,6 +58,10 @@ class WatchlistComponent:
         """ウォッチリストデータを並列取得"""
         watchlist_data = []
         
+        # WatchlistStorageからカスタム会社名を含む詳細情報を取得
+        watchlist_items = self.watchlist_storage.get_watchlist_items()
+        symbol_to_name = {item.symbol: item.name for item in watchlist_items}
+        
         def fetch_symbol_data(symbol: str) -> Dict[str, Any]:
             """個別銘柄データ取得"""
             try:
@@ -86,12 +90,18 @@ class WatchlistComponent:
                 # トレンド判定
                 trend = self._determine_trend(current_price, sma_5, sma_20)
                 
-                # 銘柄情報を取得
-                symbol_info = self.symbol_manager.get_symbol_info(symbol)
+                # カスタム会社名を優先して使用、なければSymbolManagerから取得
+                custom_name = symbol_to_name.get(symbol)
+                if custom_name and custom_name != "N/A":
+                    company_name = custom_name
+                else:
+                    # フォールバック: SymbolManagerから取得
+                    symbol_info = self.symbol_manager.get_symbol_info(symbol)
+                    company_name = symbol_info['name']
                 
                 return {
                     'symbol': symbol,
-                    'name': symbol_info['name'],
+                    'name': company_name,
                     'current_price': current_price,
                     'change': change,
                     'change_pct': change_pct,
