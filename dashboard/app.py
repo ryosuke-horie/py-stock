@@ -20,6 +20,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from src.data_collector.stock_data_collector import StockDataCollector
+from src.data_collector.symbol_manager import SymbolManager
 from src.technical_analysis.indicators import TechnicalIndicators
 from src.technical_analysis.signal_generator import SignalGenerator
 from src.risk_management.risk_manager import RiskManager, RiskParameters
@@ -121,6 +122,7 @@ class StockDashboard:
         """初期化"""
         self.data_collector = StockDataCollector()
         self.utils = DashboardUtils()
+        self.symbol_manager = SymbolManager()
         
         # ウォッチリストストレージ初期化
         self.watchlist_storage = WatchlistStorage()
@@ -429,6 +431,10 @@ class StockDashboard:
             
             colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
             
+            # WatchlistStorageからカスタム会社名を含む詳細情報を取得
+            watchlist_items = self.watchlist_storage.get_watchlist_items()
+            symbol_to_name = {item.symbol: item.name for item in watchlist_items}
+            
             for i, symbol in enumerate(st.session_state.watchlist[:5]):  # 最大5銘柄
                 try:
                     data = self.data_collector.get_stock_data(symbol, period="1d", interval="5m")
@@ -436,13 +442,25 @@ class StockDashboard:
                         # 正規化（開始価格を100として）
                         normalized_prices = (data['close'] / data['close'].iloc[0]) * 100
                         
+                        # カスタム会社名を優先して使用、なければSymbolManagerから取得
+                        custom_name = symbol_to_name.get(symbol)
+                        if custom_name and custom_name != "N/A":
+                            display_name = f"{symbol} ({custom_name})"
+                        else:
+                            # フォールバック: SymbolManagerから取得
+                            symbol_info = self.symbol_manager.get_symbol_info(symbol)
+                            if symbol_info['name'] != 'N/A':
+                                display_name = f"{symbol} ({symbol_info['name']})"
+                            else:
+                                display_name = symbol
+                        
                         fig.add_trace(go.Scatter(
                             x=data['timestamp'],
                             y=normalized_prices,
                             mode='lines',
-                            name=symbol,
+                            name=display_name,
                             line=dict(color=colors[i % len(colors)]),
-                            hovertemplate=f"{symbol}<br>価格: %{{y:.2f}}<br>時刻: %{{x}}<extra></extra>"
+                            hovertemplate=f"{display_name}<br>価格: %{{y:.2f}}<br>時刻: %{{x}}<extra></extra>"
                         ))
                 except Exception as e:
                     st.warning(f"データ取得エラー ({symbol}): {e}")
