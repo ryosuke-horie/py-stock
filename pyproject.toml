@@ -182,7 +182,7 @@ precision = 2
 [tool.coverage.html]
 directory = "htmlcov"
 skip_covered = false
-show_contexts = true
+show_contexts = false
 
 [tool.coverage.xml]
 output = "coverage.xml"
@@ -206,8 +206,6 @@ pythonpath = ["src"]
 filterwarnings = [
     "error",
     "ignore::UserWarning",
-    "ignore::DeprecationWarning",
-    "ignore::coverage.exceptions.CoverageWarning",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
