@@ -106,12 +106,13 @@ class WatchlistStorage:
             conn.commit()
             logger.info(f"ウォッチリストデータベース初期化完了: {self.db_path}")
     
-    def add_symbol(self, symbol: str) -> bool:
+    def add_symbol(self, symbol: str, custom_name: str = None) -> bool:
         """
         ウォッチリストに銘柄を追加
         
         Args:
             symbol: 銘柄コード
+            custom_name: カスタム会社名（任意）。指定された場合は自動取得された名前より優先される
             
         Returns:
             成功した場合True
@@ -125,7 +126,13 @@ class WatchlistStorage:
             # 銘柄情報を取得
             symbol_info = self.symbol_manager.get_symbol_info(symbol)
             normalized_symbol = symbol_info['normalized']
-            name = symbol_info['name']
+            
+            # カスタム名が指定されている場合は優先、そうでなければ自動取得された名前を使用
+            if custom_name and custom_name.strip():
+                name = custom_name.strip()
+            else:
+                name = symbol_info['name']
+            
             market_type = symbol_info['market_type']
             
             # 無効な市場タイプの場合は追加しない

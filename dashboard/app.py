@@ -241,32 +241,42 @@ class StockDashboard:
         
         # 新しい銘柄追加
         new_symbol = st.sidebar.text_input("銘柄コードを追加:")
+        new_company_name = st.sidebar.text_input(
+            "会社名（任意）:",
+            help="会社名を入力すると、ウォッチリストに表示されます。空欄の場合は自動取得されます。"
+        )
         if st.sidebar.button("➕ 追加"):
             if new_symbol and new_symbol not in st.session_state.watchlist:
-                # DBに追加
-                if self.watchlist_storage.add_symbol(new_symbol.upper()):
+                # DBに追加（会社名も含む）
+                if self.watchlist_storage.add_symbol(new_symbol.upper(), new_company_name.strip() if new_company_name else None):
                     # 成功した場合、セッション状態も更新
                     st.session_state.watchlist = self.watchlist_storage.get_symbols()
-                    st.success(f"銘柄を追加しました: {new_symbol.upper()}")
+                    display_name = f"{new_symbol.upper()}" + (f" ({new_company_name.strip()})" if new_company_name.strip() else "")
+                    st.success(f"銘柄を追加しました: {display_name}")
                     st.rerun()
                 else:
                     st.error(f"銘柄の追加に失敗しました: {new_symbol}")
         
         # ウォッチリスト表示と削除
-        for i, symbol in enumerate(st.session_state.watchlist):
+        watchlist_items = self.watchlist_storage.get_watchlist_items()
+        for i, item in enumerate(watchlist_items):
             col1, col2 = st.sidebar.columns([3, 1])
             with col1:
-                st.write(symbol)
+                # 銘柄コード + 会社名表示
+                display_name = item.symbol
+                if item.name and item.name != "N/A":
+                    display_name = f"{item.symbol} ({item.name})"
+                st.write(display_name)
             with col2:
                 if st.button("❌", key=f"del_{i}"):
                     # DBから削除
-                    if self.watchlist_storage.remove_symbol(symbol):
+                    if self.watchlist_storage.remove_symbol(item.symbol):
                         # 成功した場合、セッション状態も更新
                         st.session_state.watchlist = self.watchlist_storage.get_symbols()
-                        st.success(f"銘柄を削除しました: {symbol}")
+                        st.success(f"銘柄を削除しました: {display_name}")
                         st.rerun()
                     else:
-                        st.error(f"銘柄の削除に失敗しました: {symbol}")
+                        st.error(f"銘柄の削除に失敗しました: {item.symbol}")
         
         st.sidebar.markdown("---")
         
