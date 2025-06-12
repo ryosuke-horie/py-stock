@@ -29,21 +29,21 @@ def render_fundamental_analysis_tab():
     
     # サイドバー設定
     with st.sidebar:
-        st.markdown("### 🎯 分析対象")
+        st.markdown("### 📊 ファンダメンタルズ分析設定")
         
         # 分析対象銘柄の選択
         symbol = st.text_input(
-            "銘柄コード",
+            "📊 分析対象銘柄",
             value="",
-            help="分析したい銘柄コードを入力してください（例: 7203.T, AAPL）",
+            help="ファンダメンタル分析したい銘柄コードを入力してください（例: 7203.T, AAPL）",
             key="fundamental_analysis_symbol"
         )
         
         # 同業他社比較用銘柄
         peer_symbols_input = st.text_area(
-            "同業他社銘柄（カンマ区切り）",
+            "🔄 同業他社比較（任意）",
             value="",
-            help="比較したい同業他社の銘柄コードをカンマ区切りで入力してください"
+            help="同業他社と比較分析したい場合は、銘柄コードをカンマ区切りで入力してください（例: 7201.T,7267.T）"
         )
         
         # 分析期間設定

@@ -283,16 +283,16 @@ class StockDashboard:
         st.sidebar.markdown("---")
         
         # 分析対象銘柄選択
-        st.sidebar.markdown("### 🎯 分析対象")
+        st.sidebar.markdown("### 🎯 分析対象銘柄")
         if st.session_state.watchlist:
             st.session_state.selected_symbol = st.sidebar.selectbox(
-                "詳細分析する銘柄:",
+                "チャート・シグナル分析対象:",
                 st.session_state.watchlist,
                 index=st.session_state.watchlist.index(st.session_state.selected_symbol) 
                 if st.session_state.selected_symbol in st.session_state.watchlist else 0
             )
         else:
-            st.sidebar.info("ウォッチリストに銘柄を追加してください。")
+            st.sidebar.info("📋 上記のウォッチリストに銘柄を追加すると、詳細な分析が可能になります。")
         
         # データ取得期間設定
         st.sidebar.markdown("### 📅 データ設定")
@@ -352,12 +352,18 @@ class StockDashboard:
         
         # システム情報
         st.sidebar.markdown("---")
-        st.sidebar.markdown("### ℹ️ システム情報")
+        st.sidebar.markdown("### ℹ️ 現在の設定状況")
+        
+        # 選択された銘柄の表示改善
+        selected_display = st.session_state.selected_symbol if st.session_state.selected_symbol else "未選択"
+        
         st.sidebar.info(f"""
-        **ウォッチリスト**: {len(st.session_state.watchlist)}銘柄  
-        **アクティブアラート**: {len([a for a in st.session_state.alerts if a.get('active', True)])}件  
-        **分析対象**: {st.session_state.selected_symbol}  
-        **データ期間**: {period} ({interval}間隔)
+        **📋 ウォッチリスト**: {len(st.session_state.watchlist)}銘柄  
+        **🚨 アクティブアラート**: {len([a for a in st.session_state.alerts if a.get('active', True)])}件  
+        **🎯 分析対象銘柄**: {selected_display}  
+        **📅 データ期間**: {period} ({interval}間隔)
+        
+        💡 **ヒント**: 各タブのサイドバーで個別に分析設定が可能です
         """)
     
     def show_overview(self):

@@ -28,14 +28,14 @@ def render_market_environment_tab():
     
     # サイドバーで設定
     with st.sidebar:
-        st.subheader("市場環境分析設定")
+        st.markdown("### 🌍 市場環境分析設定")
         
         # 分析期間の選択
         period = st.selectbox(
-            "分析期間",
+            "🌍 分析期間",
             ["1d", "5d", "1mo", "3mo"],
             index=1,
-            help="市場環境を分析する期間"
+            help="市場環境の分析期間を選択してください（短期間ほど詳細、長期間ほど全体傾向を把握可能）"
         )
         
         # データ間隔の選択（期間に応じて制限）

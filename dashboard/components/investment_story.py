@@ -31,20 +31,20 @@ def render_investment_story_tab():
     
     # サイドバー設定
     with st.sidebar:
-        st.markdown("### 🎯 分析設定")
+        st.markdown("### 📖 投資ストーリー分析設定")
         
         # 分析対象銘柄の選択
         analysis_type = st.radio(
-            "分析タイプ",
+            "📈 分析タイプ",
             ["単一銘柄分析", "複数銘柄比較"],
-            help="単一銘柄の詳細分析か、複数銘柄の比較分析を選択してください"
+            help="投資ストーリー作成のタイプを選択してください"
         )
         
         if analysis_type == "単一銘柄分析":
             symbol = st.text_input(
-                "銘柄コード",
+                "📖 分析対象銘柄",
                 value="",
-                help="分析したい銘柄コードを入力してください（例: 7203.T, AAPL）",
+                help="投資ストーリーを作成したい銘柄コードを入力してください（例: 7203.T, AAPL）",
                 key="investment_story_symbol"
             )
             
