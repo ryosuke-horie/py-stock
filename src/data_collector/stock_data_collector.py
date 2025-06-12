@@ -144,9 +144,15 @@ class StockDataCollector:
                 existing_columns = [col for col in db_columns if col in data_copy.columns]
                 data_filtered = data_copy[existing_columns]
                 
-                # REPLACE INTOで重複データを上書き
-                data_filtered.to_sql('stock_data', conn, if_exists='append', 
-                                   index=False, method='multi')
+                # INSERT OR REPLACEで重複データを上書き
+                # まず既存データを削除してから挿入
+                for _, row in data_filtered.iterrows():
+                    conn.execute(
+                        "INSERT OR REPLACE INTO stock_data "
+                        "(symbol, interval, timestamp, open, high, low, close, volume, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        tuple(row)
+                    )
                 
                 logger.debug(f"キャッシュ保存完了: {data['symbol'].iloc[0]} ({len(data)}件)")
                 

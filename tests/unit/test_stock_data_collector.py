@@ -167,6 +167,35 @@ class TestStockDataCollector:
             cursor.execute("SELECT COUNT(*) FROM stock_data WHERE symbol = ?", (self.test_symbol,))
             count = cursor.fetchone()[0]
             assert count == len(self.test_data)
+            
+    def test_save_to_cache_duplicate_data(self):
+        """重複データ保存テスト（INSERT OR REPLACE）"""
+        # 最初のデータを保存
+        self.collector._save_to_cache(self.test_data)
+        
+        # 同じタイムスタンプで異なる価格データを作成
+        duplicate_data = self.test_data.copy()
+        duplicate_data['close'] = duplicate_data['close'] * 1.1  # 価格を10%上昇
+        
+        # 重複データを保存（エラーが発生しないことを確認）
+        self.collector._save_to_cache(duplicate_data)
+        
+        # データベース内のレコード数が変わっていないことを確認
+        with sqlite3.connect(self.collector.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM stock_data WHERE symbol = ?", (self.test_symbol,))
+            count = cursor.fetchone()[0]
+            assert count == len(self.test_data)
+            
+            # 最新の価格データで上書きされていることを確認
+            cursor.execute(
+                "SELECT close FROM stock_data WHERE symbol = ? ORDER BY timestamp LIMIT 1", 
+                (self.test_symbol,)
+            )
+            updated_price = cursor.fetchone()[0]
+            original_price = self.test_data['close'].iloc[0]
+            expected_price = original_price * 1.1
+            assert abs(updated_price - expected_price) < 0.01
     
     def test_load_from_cache(self):
         """キャッシュ読み込みテスト"""

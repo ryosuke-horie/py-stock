@@ -198,10 +198,10 @@ class InvestmentStoryGenerator:
         """包括的な投資レポートを生成"""
         try:
             company_name = (
-                financial_metrics.company_name if financial_metrics else symbol
+                financial_metrics.company_name if financial_metrics and hasattr(financial_metrics, 'company_name') else symbol
             )
             price = current_price or (
-                financial_metrics.price if financial_metrics else 0.0
+                financial_metrics.price if financial_metrics and hasattr(financial_metrics, 'price') else 0.0
             )
 
             # 全体評価を決定
@@ -266,12 +266,12 @@ class InvestmentStoryGenerator:
             # エラー時はデフォルトレポートを返す
             try:
                 company_name = (
-                    financial_metrics.company_name if financial_metrics else symbol
+                    financial_metrics.company_name if financial_metrics and hasattr(financial_metrics, 'company_name') else symbol
                 )
                 price = current_price or (
-                    financial_metrics.price if financial_metrics else 0.0
+                    financial_metrics.price if financial_metrics and hasattr(financial_metrics, 'price') else 0.0
                 )
-            except:
+            except (AttributeError, TypeError):
                 company_name = symbol
                 price = current_price or 0.0
             return self._create_default_report(symbol, company_name, price)
