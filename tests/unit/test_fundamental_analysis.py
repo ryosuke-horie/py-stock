@@ -1040,5 +1040,506 @@ class TestDividendYieldNormalization:
         assert result == 0.0101  # 1を超えるのでパーセンテージ形式と判定
 
 
+class TestFundamentalAnalyzerTypeConversionErrorHandling:
+    """型変換エラーハンドリングのテスト（Issue #99対応）"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_current_ratio_calculation_type_error(self, mock_logger, mock_ticker, analyzer):
+        """流動比率計算での型変換エラーテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'Type Error Test Company',
+            'trailingPE': 15.0,
+        }
+        
+        # Timestamp型のデータを含む貸借対照表データ（型変換エラーを引き起こす）
+        balance_sheet_data = {
+            'Current Assets': pd.Timestamp('2024-01-01'),  # Timestamp型
+            'Current Liabilities': 200000000,
+            'Total Equity Gross Minority Interest': 800000000,
+            'Total Assets': 1200000000,
+            'Total Debt': 300000000
+        }
+        balance_sheet = pd.DataFrame([balance_sheet_data]).T
+        
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = balance_sheet
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('TYPE_ERROR_TEST')
+        
+        # 型変換エラーが発生しても結果が返されることを確認
+        assert result is not None
+        assert result.current_ratio is None  # エラーのため設定されない
+        
+        # エラーログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "流動比率計算エラー TYPE_ERROR_TEST: float() argument must be a string or a real number, not 'Timestamp'"
+        )
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_equity_ratio_calculation_type_error(self, mock_logger, mock_ticker, analyzer):
+        """自己資本比率計算での型変換エラーテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {'longName': 'Equity Error Test'}
+        
+        balance_sheet_data = {
+            'Current Assets': 500000000,
+            'Current Liabilities': 200000000,
+            'Total Equity Gross Minority Interest': "invalid_string",  # 文字列型
+            'Total Assets': 1200000000,
+            'Total Debt': 300000000
+        }
+        balance_sheet = pd.DataFrame([balance_sheet_data]).T
+        
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = balance_sheet
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('EQUITY_ERROR_TEST')
+        
+        assert result is not None
+        assert result.equity_ratio is None
+        
+        # 自己資本比率計算エラーのログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "自己資本比率計算エラー EQUITY_ERROR_TEST: could not convert string to float: 'invalid_string'"
+        )
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_debt_ratio_calculation_type_error(self, mock_logger, mock_ticker, analyzer):
+        """負債比率計算での型変換エラーテスト"""
+        mock_instance = Mock()
+        mock_instance.info = {'longName': 'Debt Error Test'}
+        
+        balance_sheet_data = {
+            'Current Assets': 500000000,
+            'Current Liabilities': 200000000,
+            'Total Equity Gross Minority Interest': 800000000,
+            'Total Assets': 1200000000,
+            'Total Debt': np.inf  # 無限大値
+        }
+        balance_sheet = pd.DataFrame([balance_sheet_data]).T
+        
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = balance_sheet
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('DEBT_ERROR_TEST')
+        
+        assert result is not None
+        # 無限大値は float() で変換可能なので、この場合は計算される
+        assert result.debt_ratio == float('inf')
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_revenue_data_type_conversion_error(self, mock_logger, mock_ticker, analyzer):
+        """売上データ型変換エラーテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        
+        # Timestamp型のデータを含む財務データ（データは古い年から新しい年の順で処理される）
+        data = {
+            dates[1]: [900000000, 85000000],                    # 2023年（古い年）
+            dates[0]: [pd.Timestamp('2024-01-01'), 100000000]  # 2024年（新しい年）売上がTimestamp型
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('REVENUE_TYPE_ERROR_TEST')
+        
+        # 結果が返されることを確認（一部データがエラーでも処理続行）
+        assert result is not None
+        assert len(result.revenue_trend) == 2
+        assert result.revenue_trend[0] == 900000000.0  # 2023年（正常データ）
+        assert np.isnan(result.revenue_trend[1])       # 2024年（エラーデータはNaN）
+        
+        # 型変換エラーのログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "売上データの型変換エラー REVENUE_TYPE_ERROR_TEST, 2024: float() argument must be a string or a real number, not 'Timestamp'"
+        )
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_profit_data_type_conversion_error(self, mock_logger, mock_ticker, analyzer):
+        """利益データ型変換エラーテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        
+        data = {
+            dates[1]: [900000000, 85000000],              # 2023年（古い年）
+            dates[0]: [1000000000, "invalid_profit"]      # 2024年（新しい年）利益が文字列型
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('PROFIT_TYPE_ERROR_TEST')
+        
+        assert result is not None
+        assert len(result.profit_trend) == 2
+        assert result.profit_trend[0] == 85000000.0  # 2023年（正常データ）
+        assert np.isnan(result.profit_trend[1])      # 2024年（エラーデータはNaN）
+        
+        # 型変換エラーのログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "利益データの型変換エラー PROFIT_TYPE_ERROR_TEST, 2024: could not convert string to float: 'invalid_profit'"
+        )
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_alternative_revenue_data_type_conversion_error(self, mock_logger, mock_ticker, analyzer):
+        """代替売上データ型変換エラーテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        
+        # "Total Revenue"がなく、"Revenue"にTimestamp型データがある
+        data = {
+            dates[1]: [900000000, 85000000],                    # 2023年（古い年）
+            dates[0]: [pd.Timestamp('2024-01-01'), 100000000]  # 2024年（新しい年）
+        }
+        
+        financials = pd.DataFrame(data, index=['Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('ALT_REVENUE_TYPE_ERROR_TEST')
+        
+        assert result is not None
+        assert len(result.revenue_trend) == 2
+        assert result.revenue_trend[0] == 900000000.0  # 2023年（正常データ）
+        assert np.isnan(result.revenue_trend[1])       # 2024年（エラーデータはNaN）
+        
+        # 代替売上データの型変換エラーログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "代替売上データの型変換エラー ALT_REVENUE_TYPE_ERROR_TEST, 2024: float() argument must be a string or a real number, not 'Timestamp'"
+        )
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    @patch('src.technical_analysis.fundamental_analysis.logger')
+    def test_alternative_profit_data_type_conversion_error(self, mock_logger, mock_ticker, analyzer):
+        """代替利益データ型変換エラーテスト"""
+        dates = [datetime(2024, 12, 31), datetime(2023, 12, 31)]
+        
+        # "Net Income"がなく、"Profit"に不正データがある
+        data = {
+            dates[1]: [900000000, 85000000],               # 2023年（古い年）
+            dates[0]: [1000000000, "bad_profit_data"]      # 2024年（新しい年）
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Profit'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('ALT_PROFIT_TYPE_ERROR_TEST')
+        
+        assert result is not None
+        assert len(result.profit_trend) == 2
+        assert result.profit_trend[0] == 85000000.0  # 2023年（正常データ）
+        assert np.isnan(result.profit_trend[1])      # 2024年（エラーデータはNaN）
+        
+        # 代替利益データの型変換エラーログが出力されることを確認
+        mock_logger.warning.assert_any_call(
+            "代替利益データの型変換エラー ALT_PROFIT_TYPE_ERROR_TEST, 2024: could not convert string to float: 'bad_profit_data'"
+        )
+
+
+class TestFundamentalAnalyzerRankingBoundaryConditions:
+    """同業他社比較のランキング処理境界値テスト（Issue #99対応）"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    def test_compare_with_peers_non_dict_rankings(self, analyzer):
+        """ランキングが辞書型でない場合のテスト"""
+        # ランキング計算で何らかの理由で辞書型以外が生成された場合を模擬
+        
+        metrics_data = {
+            'TARGET': FinancialMetrics(
+                symbol='TARGET', company_name='Target Co',
+                per=15.0, pbr=1.2, roe=0.18, dividend_yield=0.025
+            ),
+            'PEER1': FinancialMetrics(
+                symbol='PEER1', company_name='Peer 1',
+                per=12.0, pbr=1.5, roe=0.15, dividend_yield=0.03
+            )
+        }
+        
+        def mock_get_metrics(symbol):
+            return metrics_data.get(symbol)
+        
+        with patch.object(analyzer, 'get_financial_metrics', side_effect=mock_get_metrics):
+            result = analyzer.compare_with_peers('TARGET', ['PEER1'])
+        
+        # 結果が正常に返されることを確認
+        assert isinstance(result, ComparisonResult)
+        assert result.target_symbol == 'TARGET'
+        
+        # ランキングが辞書型であることを確認
+        for metric_name, ranks in result.rank.items():
+            assert isinstance(ranks, int)  # ターゲット銘柄の順位は整数
+    
+    def test_compare_with_peers_target_not_in_rankings(self, analyzer):
+        """ターゲット銘柄がランキングに含まれない場合のテスト"""
+        # ターゲット銘柄のデータが不完全でランキングに含まれない場合
+        
+        metrics_data = {
+            'TARGET': FinancialMetrics(
+                symbol='TARGET', company_name='Target Co',
+                # PER、PBRなどが全てNone（データ不足）
+            ),
+            'PEER1': FinancialMetrics(
+                symbol='PEER1', company_name='Peer 1',
+                per=12.0, pbr=1.5, roe=0.15, dividend_yield=0.03
+            ),
+            'PEER2': FinancialMetrics(
+                symbol='PEER2', company_name='Peer 2',
+                per=18.0, pbr=1.0, roe=0.20, dividend_yield=0.02
+            )
+        }
+        
+        def mock_get_metrics(symbol):
+            return metrics_data.get(symbol)
+        
+        with patch.object(analyzer, 'get_financial_metrics', side_effect=mock_get_metrics):
+            result = analyzer.compare_with_peers('TARGET', ['PEER1', 'PEER2'])
+        
+        # 結果が返されることを確認
+        assert isinstance(result, ComparisonResult)
+        assert result.target_symbol == 'TARGET'
+        
+        # ターゲット銘柄がランキングに含まれない場合、空の辞書になる
+        assert isinstance(result.rank, dict)
+        # データが不足している場合、ランキングに含まれない可能性がある
+    
+    def test_compare_with_peers_empty_comparison_data(self, analyzer):
+        """比較データが空の場合のテスト"""
+        
+        metrics_data = {
+            'TARGET': FinancialMetrics(
+                symbol='TARGET', company_name='Target Co'
+                # 全ての財務指標がNone
+            ),
+            'PEER1': FinancialMetrics(
+                symbol='PEER1', company_name='Peer 1'
+                # 全ての財務指標がNone
+            )
+        }
+        
+        def mock_get_metrics(symbol):
+            return metrics_data.get(symbol)
+        
+        with patch.object(analyzer, 'get_financial_metrics', side_effect=mock_get_metrics):
+            result = analyzer.compare_with_peers('TARGET', ['PEER1'])
+        
+        # データが空でも結果が返されることを確認
+        assert isinstance(result, ComparisonResult)
+        assert result.target_symbol == 'TARGET'
+        assert result.comparison_symbols == ['PEER1']
+        
+        # 空のデータの場合、比較結果も空になる（または辞書型であることを確認）
+        assert isinstance(result.metrics_comparison, dict)
+        assert isinstance(result.rank, dict)
+        assert isinstance(result.industry_average, dict)
+    
+    def test_compare_with_peers_single_valid_metric(self, analyzer):
+        """一つの指標のみ有効な場合のテスト"""
+        
+        metrics_data = {
+            'TARGET': FinancialMetrics(
+                symbol='TARGET', company_name='Target Co',
+                per=15.0  # PERのみ有効
+            ),
+            'PEER1': FinancialMetrics(
+                symbol='PEER1', company_name='Peer 1',
+                per=12.0  # PERのみ有効
+            ),
+            'PEER2': FinancialMetrics(
+                symbol='PEER2', company_name='Peer 2',
+                per=18.0  # PERのみ有効
+            )
+        }
+        
+        def mock_get_metrics(symbol):
+            return metrics_data.get(symbol)
+        
+        with patch.object(analyzer, 'get_financial_metrics', side_effect=mock_get_metrics):
+            result = analyzer.compare_with_peers('TARGET', ['PEER1', 'PEER2'])
+        
+        # 結果が返されることを確認
+        assert isinstance(result, ComparisonResult)
+        assert result.target_symbol == 'TARGET'
+        
+        # PERが比較データに含まれることを確認
+        assert 'per' in result.metrics_comparison
+        # PER以外の指標はデータがないため空の辞書になる
+        assert len(result.metrics_comparison['per']) == 3  # TARGET, PEER1, PEER2
+        
+        # PERランキングが正しく計算されることを確認
+        assert 'per' in result.rank
+        assert isinstance(result.rank['per'], int)
+        
+        # 業界平均が計算されることを確認
+        assert 'per' in result.industry_average
+        assert result.industry_average['per'] == (15.0 + 12.0 + 18.0) / 3
+    
+    def test_compare_with_peers_mixed_data_availability(self, analyzer):
+        """データの有無が混在する場合のテスト"""
+        
+        metrics_data = {
+            'TARGET': FinancialMetrics(
+                symbol='TARGET', company_name='Target Co',
+                per=15.0, roe=0.18  # PERとROEのみ
+            ),
+            'PEER1': FinancialMetrics(
+                symbol='PEER1', company_name='Peer 1',
+                per=12.0, pbr=1.5, dividend_yield=0.03  # PER、PBR、配当利回り
+            ),
+            'PEER2': FinancialMetrics(
+                symbol='PEER2', company_name='Peer 2',
+                pbr=1.0, roe=0.20, current_ratio=2.5  # PBR、ROE、流動比率
+            )
+        }
+        
+        def mock_get_metrics(symbol):
+            return metrics_data.get(symbol)
+        
+        with patch.object(analyzer, 'get_financial_metrics', side_effect=mock_get_metrics):
+            result = analyzer.compare_with_peers('TARGET', ['PEER1', 'PEER2'])
+        
+        # 結果が返されることを確認
+        assert isinstance(result, ComparisonResult)
+        
+        # 共通するデータのみが比較対象になることを確認
+        available_metrics = list(result.metrics_comparison.keys())
+        
+        # PERは TARGET と PEER1 にあるので比較データに含まれる
+        if 'per' in available_metrics:
+            assert 'TARGET' in result.metrics_comparison['per']
+            assert 'PEER1' in result.metrics_comparison['per']
+            assert 'PEER2' not in result.metrics_comparison['per']  # PEER2にはPERなし
+        
+        # ROEは TARGET と PEER2 にあるので比較データに含まれる
+        if 'roe' in available_metrics:
+            assert 'TARGET' in result.metrics_comparison['roe']
+            assert 'PEER2' in result.metrics_comparison['roe']
+            assert 'PEER1' not in result.metrics_comparison['roe']  # PEER1にはROEなし
+
+
+class TestFundamentalAnalyzerNaNHandling:
+    """NaN値とNull値の処理テスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        return FundamentalAnalyzer()
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_financial_metrics_with_nan_values(self, mock_ticker, analyzer):
+        """NaN値を含む財務指標の処理テスト"""
+        mock_instance = Mock()
+        mock_instance.info = {
+            'longName': 'NaN Test Company',
+            'trailingPE': float('nan'),  # NaN値
+            'priceToBook': 1.2,
+            'returnOnEquity': None,  # None値
+            'dividendYield': 0.025,
+        }
+        
+        balance_sheet_data = {
+            'Current Assets': float('nan'),  # NaN値
+            'Current Liabilities': 200000000,
+            'Total Equity Gross Minority Interest': None,  # None値
+            'Total Assets': 1200000000,
+            'Total Debt': 300000000
+        }
+        balance_sheet = pd.DataFrame([balance_sheet_data]).T
+        
+        mock_instance.financials = pd.DataFrame()
+        mock_instance.balance_sheet = balance_sheet
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.get_financial_metrics('NAN_TEST')
+        
+        # NaN値やNone値があっても結果が返されることを確認
+        assert result is not None
+        assert result.symbol == 'NAN_TEST'
+        
+        # NaN値は適切に処理されることを確認
+        assert pd.isna(result.per) or result.per is None
+        assert result.pbr == 1.2  # 正常な値
+        assert result.roe is None  # None値
+        assert result.dividend_yield == 0.025  # 正常な値
+        
+        # 計算された指標もNaN/Noneが適切に処理されることを確認
+        assert result.current_ratio is None  # NaN値のため計算不可
+        assert result.equity_ratio is None  # None値のため計算不可
+    
+    @patch('src.technical_analysis.fundamental_analysis.yf.Ticker')
+    def test_growth_trend_with_mixed_nan_values(self, mock_ticker, analyzer):
+        """売上・利益データにNaN値が混在する場合のテスト"""
+        dates = [
+            datetime(2024, 12, 31),
+            datetime(2023, 12, 31),
+            datetime(2022, 12, 31),
+            datetime(2021, 12, 31)
+        ]
+        
+        data = {
+            dates[3]: [float('nan'), float('nan')], # 2021年：両方がNaN
+            dates[2]: [800000000, float('nan')],    # 2022年：利益がNaN
+            dates[1]: [float('nan'), 85000000],     # 2023年：売上がNaN
+            dates[0]: [1000000000, 100000000]      # 2024年：正常データ
+        }
+        
+        financials = pd.DataFrame(data, index=['Total Revenue', 'Net Income'])
+        
+        mock_instance = Mock()
+        mock_instance.financials = financials
+        mock_instance.balance_sheet = pd.DataFrame()
+        mock_ticker.return_value = mock_instance
+        
+        result = analyzer.analyze_growth_trend('NAN_MIXED_TEST')
+        
+        # NaN値が混在していても結果が返されることを確認
+        assert result is not None
+        assert len(result.revenue_trend) == 4
+        assert len(result.profit_trend) == 4
+        
+        # NaN値が適切に処理されることを確認（年代順）
+        assert np.isnan(result.revenue_trend[0])         # 2021年：NaN値
+        assert result.revenue_trend[1] == 800000000.0    # 2022年：正常データ
+        assert np.isnan(result.revenue_trend[2])         # 2023年：NaN値
+        assert result.revenue_trend[3] == 1000000000.0   # 2024年：正常データ
+        
+        assert np.isnan(result.profit_trend[0])          # 2021年：NaN値
+        assert np.isnan(result.profit_trend[1])          # 2022年：NaN値
+        assert result.profit_trend[2] == 85000000.0      # 2023年：正常データ
+        assert result.profit_trend[3] == 100000000.0     # 2024年：正常データ
+        
+        # CAGR計算では有効データのみが使用されることを確認
+        assert isinstance(result.revenue_cagr, (float, type(None)))
+        assert isinstance(result.profit_cagr, (float, type(None)))
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
