@@ -14,7 +14,7 @@
     <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110">
         <text x="30" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="480">coverage</text>
         <text x="29" y="14" transform="scale(.1)" textLength="480">coverage</text>
-        <text x="79" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="300">20.9%</text>
-        <text x="78" y="14" transform="scale(.1)" textLength="300">20.9%</text>
+        <text x="79" y="15" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="300">20.8%</text>
+        <text x="78" y="14" transform="scale(.1)" textLength="300">20.8%</text>
     </g>
 </svg>
