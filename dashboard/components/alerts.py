@@ -393,7 +393,7 @@ class AlertComponent:
         
         alert_types = ['価格アラート', 'シグナルアラート', 'ボラティリティアラート', '出来高アラート']
         priorities = ['高', '中', '低']
-        symbols = ['7203.T', '6758.T', '9984.T', 'AAPL', 'MSFT']
+        symbols = ['SAMPLE.T', 'DEMO.T', 'TEST.T', 'EXAMPLE1', 'EXAMPLE2']
         
         history = []
         for i in range(50):

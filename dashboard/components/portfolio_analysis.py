@@ -81,7 +81,7 @@ class PortfolioAnalysisComponent:
             
             # ポジション追加フォーム
             with st.form("add_position_form"):
-                symbol = st.text_input("銘柄コード", value="7203.T", key="portfolio_analysis_symbol")
+                symbol = st.text_input("銘柄コード", value="", key="portfolio_analysis_symbol")
                 
                 side = st.selectbox(
                     "ポジション",

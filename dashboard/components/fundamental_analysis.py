@@ -34,7 +34,7 @@ def render_fundamental_analysis_tab():
         # 分析対象銘柄の選択
         symbol = st.text_input(
             "銘柄コード",
-            value="7203.T",
+            value="",
             help="分析したい銘柄コードを入力してください（例: 7203.T, AAPL）",
             key="fundamental_analysis_symbol"
         )
@@ -42,7 +42,7 @@ def render_fundamental_analysis_tab():
         # 同業他社比較用銘柄
         peer_symbols_input = st.text_area(
             "同業他社銘柄（カンマ区切り）",
-            value="7201.T,7267.T,7269.T",
+            value="",
             help="比較したい同業他社の銘柄コードをカンマ区切りで入力してください"
         )
         
