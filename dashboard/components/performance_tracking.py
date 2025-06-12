@@ -35,14 +35,14 @@ def render_performance_tracking_tab():
     
     # サイドバー設定
     with st.sidebar:
-        st.markdown("### 📊 分析設定")
+        st.markdown("### 📈 パフォーマンス追跡設定")
         
         # 分析期間設定
         analysis_period = st.selectbox(
-            "分析期間",
+            "📈 分析期間",
             ["30日", "60日", "90日", "6ヶ月", "1年"],
             index=2,
-            help="パフォーマンス分析の対象期間を選択してください"
+            help="パフォーマンス追跡の分析期間を選択してください（期間が長いほど安定したパターン分析が可能）"
         )
         
         period_mapping = {
