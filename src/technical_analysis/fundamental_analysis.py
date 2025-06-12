@@ -219,19 +219,34 @@ class FundamentalAnalyzer:
                 # 流動比率の計算
                 current_assets = latest_bs.get("Current Assets")
                 current_liabilities = latest_bs.get("Current Liabilities")
-                if current_assets and current_liabilities and current_liabilities != 0:
-                    metrics.current_ratio = current_assets / current_liabilities
+                if (current_assets is not None and current_liabilities is not None and 
+                    not pd.isna(current_assets) and not pd.isna(current_liabilities) and 
+                    current_liabilities != 0):
+                    try:
+                        metrics.current_ratio = float(current_assets) / float(current_liabilities)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"流動比率計算エラー {symbol}: {e}")
 
                 # 自己資本比率の計算
                 total_equity = latest_bs.get("Total Equity Gross Minority Interest")
                 total_assets = latest_bs.get("Total Assets")
-                if total_equity and total_assets and total_assets != 0:
-                    metrics.equity_ratio = total_equity / total_assets
+                if (total_equity is not None and total_assets is not None and 
+                    not pd.isna(total_equity) and not pd.isna(total_assets) and 
+                    total_assets != 0):
+                    try:
+                        metrics.equity_ratio = float(total_equity) / float(total_assets)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"自己資本比率計算エラー {symbol}: {e}")
 
                 # 負債比率の計算
                 total_debt = latest_bs.get("Total Debt")
-                if total_debt and total_assets and total_assets != 0:
-                    metrics.debt_ratio = total_debt / total_assets
+                if (total_debt is not None and total_assets is not None and 
+                    not pd.isna(total_debt) and not pd.isna(total_assets) and 
+                    total_assets != 0):
+                    try:
+                        metrics.debt_ratio = float(total_debt) / float(total_assets)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"負債比率計算エラー {symbol}: {e}")
 
             # ROAの計算
             if info.get("returnOnAssets"):
@@ -277,15 +292,31 @@ class FundamentalAnalyzer:
                     financials.index.str.contains("Total Revenue", na=False), col
                 ]
                 if not revenue.empty:
-                    revenue_data.append(float(revenue.iloc[0]))
+                    try:
+                        revenue_value = revenue.iloc[0]
+                        if pd.isna(revenue_value):
+                            revenue_data.append(np.nan)
+                        else:
+                            revenue_data.append(float(revenue_value))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"売上データの型変換エラー {symbol}, {col.strftime('%Y')}: {e}")
+                        revenue_data.append(np.nan)
                 else:
                     # より柔軟な売上データの検索
                     revenue_alt = financials.loc[
                         financials.index.str.contains("Revenue|Sales", na=False, case=False), col
                     ]
                     if not revenue_alt.empty:
-                        revenue_data.append(float(revenue_alt.iloc[0]))
-                        logger.info(f"売上データを代替項目で発見: {revenue_alt.index[0]}")
+                        try:
+                            revenue_alt_value = revenue_alt.iloc[0]
+                            if pd.isna(revenue_alt_value):
+                                revenue_data.append(np.nan)
+                            else:
+                                revenue_data.append(float(revenue_alt_value))
+                                logger.info(f"売上データを代替項目で発見: {revenue_alt.index[0]}")
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"代替売上データの型変換エラー {symbol}, {col.strftime('%Y')}: {e}")
+                            revenue_data.append(np.nan)
                     else:
                         revenue_data.append(np.nan)
                         logger.warning(f"売上データが見つかりません: {symbol}, {col.strftime('%Y')}")
@@ -295,15 +326,31 @@ class FundamentalAnalyzer:
                     financials.index.str.contains("Net Income", na=False), col
                 ]
                 if not profit.empty:
-                    profit_data.append(float(profit.iloc[0]))
+                    try:
+                        profit_value = profit.iloc[0]
+                        if pd.isna(profit_value):
+                            profit_data.append(np.nan)
+                        else:
+                            profit_data.append(float(profit_value))
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"利益データの型変換エラー {symbol}, {col.strftime('%Y')}: {e}")
+                        profit_data.append(np.nan)
                 else:
                     # より柔軟な純利益データの検索
                     profit_alt = financials.loc[
                         financials.index.str.contains("Net Income|Profit", na=False, case=False), col
                     ]
                     if not profit_alt.empty:
-                        profit_data.append(float(profit_alt.iloc[0]))
-                        logger.info(f"利益データを代替項目で発見: {profit_alt.index[0]}")
+                        try:
+                            profit_alt_value = profit_alt.iloc[0]
+                            if pd.isna(profit_alt_value):
+                                profit_data.append(np.nan)
+                            else:
+                                profit_data.append(float(profit_alt_value))
+                                logger.info(f"利益データを代替項目で発見: {profit_alt.index[0]}")
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"代替利益データの型変換エラー {symbol}, {col.strftime('%Y')}: {e}")
+                            profit_data.append(np.nan)
                     else:
                         profit_data.append(np.nan)
                         logger.warning(f"利益データが見つかりません: {symbol}, {col.strftime('%Y')}")
@@ -436,7 +483,7 @@ class FundamentalAnalyzer:
             # ターゲット銘柄のランキング
             target_ranks = {}
             for metric_name, ranks in rankings.items():
-                if target_symbol in ranks:
+                if isinstance(ranks, dict) and target_symbol in ranks:
                     target_ranks[metric_name] = ranks[target_symbol]
 
             result = ComparisonResult(
