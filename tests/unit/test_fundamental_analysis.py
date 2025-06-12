@@ -977,5 +977,68 @@ class TestFundamentalAnalyzerAdvancedFeatures:
         assert result == {"data": "value_50"}
 
 
+class TestDividendYieldNormalization:
+    """配当利回り正規化のテスト"""
+    
+    @pytest.fixture
+    def analyzer(self):
+        """アナライザーのフィクスチャ"""
+        return FundamentalAnalyzer()
+    
+    def test_normalize_dividend_yield_decimal_format(self, analyzer):
+        """小数形式の配当利回り（0.025 = 2.5%）のテスト"""
+        # 正常な小数形式
+        result = analyzer._normalize_dividend_yield(0.025, 2.5, 100.0)
+        assert result == 0.025
+        
+        # 配当金と株価から計算可能で小数形式が正しい場合
+        result = analyzer._normalize_dividend_yield(0.03, 3.0, 100.0)
+        assert result == 0.03
+    
+    def test_normalize_dividend_yield_percentage_format(self, analyzer):
+        """パーセンテージ形式の配当利回り（2.5 = 2.5%）のテスト"""
+        # パーセンテージ形式を小数形式に変換
+        result = analyzer._normalize_dividend_yield(2.5, 2.5, 100.0)
+        assert result == 0.025
+        
+        # マミヤ・オーピーのケース（Issue #95）
+        result = analyzer._normalize_dividend_yield(12.22, 165.0, 1362.0)
+        assert abs(result - 0.1222) < 0.0001
+    
+    def test_normalize_dividend_yield_heuristic_judgment(self, analyzer):
+        """配当金・株価情報がない場合のヒューリスティック判定"""
+        # 1を超える値はパーセンテージ形式と判定
+        result = analyzer._normalize_dividend_yield(5.5, None, None)
+        assert result == 0.055
+        
+        # 1以下の値は小数形式と判定
+        result = analyzer._normalize_dividend_yield(0.035, None, None)
+        assert result == 0.035
+    
+    def test_normalize_dividend_yield_edge_cases(self, analyzer):
+        """エッジケースのテスト"""
+        # None の場合
+        result = analyzer._normalize_dividend_yield(None, 2.5, 100.0)
+        assert result is None
+        
+        # 0の場合
+        result = analyzer._normalize_dividend_yield(0.0, 0.0, 100.0)  
+        assert result == 0.0
+        
+        # 株価が0の場合
+        result = analyzer._normalize_dividend_yield(2.5, 2.5, 0.0)
+        assert result == 0.025  # ヒューリスティック判定
+    
+    def test_normalize_dividend_yield_boundary_values(self, analyzer):
+        """境界値のテスト"""
+        # 境界値 1.0
+        result = analyzer._normalize_dividend_yield(1.0, None, None)
+        assert result == 1.0  # 1以下なので小数形式と判定
+        
+        # 境界値を少し超える値
+        result = analyzer._normalize_dividend_yield(1.01, None, None)
+        assert result == 0.0101  # 1を超えるのでパーセンテージ形式と判定
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
