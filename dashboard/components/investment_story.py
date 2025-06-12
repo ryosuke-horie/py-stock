@@ -43,7 +43,7 @@ def render_investment_story_tab():
         if analysis_type == "単一銘柄分析":
             symbol = st.text_input(
                 "銘柄コード",
-                value="7203.T",
+                value="",
                 help="分析したい銘柄コードを入力してください（例: 7203.T, AAPL）",
                 key="investment_story_symbol"
             )
@@ -59,7 +59,7 @@ def render_investment_story_tab():
             if include_peers:
                 peer_symbols_input = st.text_area(
                     "同業他社銘柄（カンマ区切り）",
-                    value="7201.T,7267.T",
+                    value="",
                     help="比較したい同業他社の銘柄コードをカンマ区切りで入力"
                 )
                 peer_symbols = [s.strip() for s in peer_symbols_input.split(',') if s.strip()]
@@ -70,7 +70,7 @@ def render_investment_story_tab():
         else:  # 複数銘柄比較
             symbols_input = st.text_area(
                 "比較銘柄（カンマ区切り）",
-                value="7203.T,6758.T,9984.T",
+                value="",
                 help="比較したい銘柄コードをカンマ区切りで入力してください"
             )
             

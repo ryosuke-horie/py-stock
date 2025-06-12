@@ -149,12 +149,12 @@ class StockDashboard:
         if db_watchlist:
             st.session_state.watchlist = db_watchlist
         else:
-            # DBが空の場合のみデフォルト値を設定
-            st.session_state.watchlist = ['7203.T', '6758.T', '9984.T', 'AAPL', 'MSFT']
+            # DBが空の場合は空のウォッチリスト
+            st.session_state.watchlist = []
         
         # 選択銘柄をウォッチリストの最初に設定
         if 'selected_symbol' not in st.session_state:
-            st.session_state.selected_symbol = st.session_state.watchlist[0] if st.session_state.watchlist else '7203.T'
+            st.session_state.selected_symbol = st.session_state.watchlist[0] if st.session_state.watchlist else None
     
     def _migrate_watchlist_if_needed(self):
         """必要に応じてウォッチリストを移行"""
@@ -284,12 +284,15 @@ class StockDashboard:
         
         # 分析対象銘柄選択
         st.sidebar.markdown("### 🎯 分析対象")
-        st.session_state.selected_symbol = st.sidebar.selectbox(
-            "詳細分析する銘柄:",
-            st.session_state.watchlist,
-            index=st.session_state.watchlist.index(st.session_state.selected_symbol) 
-            if st.session_state.selected_symbol in st.session_state.watchlist else 0
-        )
+        if st.session_state.watchlist:
+            st.session_state.selected_symbol = st.sidebar.selectbox(
+                "詳細分析する銘柄:",
+                st.session_state.watchlist,
+                index=st.session_state.watchlist.index(st.session_state.selected_symbol) 
+                if st.session_state.selected_symbol in st.session_state.watchlist else 0
+            )
+        else:
+            st.sidebar.info("ウォッチリストに銘柄を追加してください。")
         
         # データ取得期間設定
         st.sidebar.markdown("### 📅 データ設定")
