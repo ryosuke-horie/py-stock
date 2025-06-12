@@ -143,6 +143,46 @@ class FundamentalAnalyzer:
             logger.error(f"財務データ取得エラー {symbol}: {str(e)}")
             return pd.DataFrame(), pd.DataFrame()
 
+    def _normalize_dividend_yield(self, dividend_yield: Optional[float], 
+                                dividend_rate: Optional[float], 
+                                current_price: Optional[float]) -> Optional[float]:
+        """
+        yfinanceから取得される配当利回りを正規化する
+        
+        yfinanceのdividendYieldは株式によって異なる形式で返される：
+        - 小数形式（0.025 = 2.5%）
+        - パーセンテージ形式（2.5 = 2.5%）
+        
+        Args:
+            dividend_yield: yfinanceから取得した配当利回り
+            dividend_rate: 配当金額
+            current_price: 現在の株価
+            
+        Returns:
+            正規化された配当利回り（小数形式、例：0.025 = 2.5%）
+        """
+        if dividend_yield is None:
+            return None
+            
+        # 配当金と株価から手動計算が可能な場合は検証する
+        if dividend_rate and current_price and current_price > 0:
+            calculated_yield = dividend_rate / current_price
+            
+            # yfinanceの値が手動計算値の100倍に近い場合、パーセンテージ形式と判定
+            if abs(dividend_yield - calculated_yield * 100) < abs(dividend_yield - calculated_yield):
+                # パーセンテージ形式なので100で割る
+                return dividend_yield / 100
+            else:
+                # すでに小数形式
+                return dividend_yield
+        
+        # 手動計算できない場合はヒューリスティック判定
+        # 配当利回りが1を超える場合はパーセンテージ形式の可能性が高い
+        if dividend_yield > 1:
+            return dividend_yield / 100
+        else:
+            return dividend_yield
+
     def get_financial_metrics(self, symbol: str) -> Optional[FinancialMetrics]:
         """基本財務指標を取得・計算"""
         try:
@@ -152,6 +192,13 @@ class FundamentalAnalyzer:
 
             financials, balance_sheet = self._get_financial_data(symbol)
 
+            # 配当利回りの正規化
+            dividend_yield = self._normalize_dividend_yield(
+                info.get("dividendYield"),
+                info.get("dividendRate"),
+                info.get("currentPrice") or info.get("regularMarketPrice")
+            )
+
             # 基本指標の取得
             metrics = FinancialMetrics(
                 symbol=symbol,
@@ -159,7 +206,7 @@ class FundamentalAnalyzer:
                 per=info.get("trailingPE"),
                 pbr=info.get("priceToBook"),
                 roe=info.get("returnOnEquity"),
-                dividend_yield=info.get("dividendYield"),
+                dividend_yield=dividend_yield,
                 price=info.get("currentPrice"),
                 market_cap=info.get("marketCap"),
                 updated_at=datetime.now(),
